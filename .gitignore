@@ -1,0 +1,29 @@
+# Ignore build artifacts
+/build/
+**/Debug/
+**/Release/
+**/x64/
+**/x86/
+*.obj
+*.pdb
+*.exe
+*.dll
+*.lib
+*.exp
+
+# Ignore CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+
+# Ignore Visual Studio files
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# Ignore macOS/Linux system files
+.DS_Store
+Thumbs.db

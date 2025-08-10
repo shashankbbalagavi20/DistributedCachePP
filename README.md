@@ -84,8 +84,11 @@ mkdir build && cd build
 cmake ..
 cmake --build .
 
-# Run leader node
+# --- Run on Linux/Mac ---
 ./DistributedCachePP --role leader --port 5000
+
+# --- Run on Windows ---
+.\Debug\DistributedCachePP.exe --role leader --port 5000
 
 # Run follower nodes
 ./DistributedCachePP --role follower --port 5001 --leader http://localhost:5000
