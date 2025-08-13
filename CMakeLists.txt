@@ -1,18 +1,19 @@
-cmake_minimum_required(VERSION 3.15)
-project(DistributedCachePP VERSION 1.0 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.10)
+project(DistributedCachePP)
 
-# Use C++17
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# Include headers
 include_directories(include)
 
-# Source files
-file(GLOB SOURCES src/*.cpp)
+# Source for production executable
+add_executable(DistributedCachePP
+    src/cache.cpp
+    src/main.cpp
+)
 
-# Create executable
-add_executable(DistributedCachePP ${SOURCES})
-
-# Link libraries (future: httplib, json, prometheus, etc.)
-# target_link_libraries(DistributedCachePP ...)
+# Debug/demo build
+add_executable(DistributedCachePP_Demo
+    src/cache.cpp
+    tests/demo.cpp
+)

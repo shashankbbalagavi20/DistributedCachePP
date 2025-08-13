@@ -47,6 +47,11 @@ public:
      */
     size_t size() const;
 
+    /**
+     * Debug helper: prints current cache order (MRU -> LRU)
+     */
+    void print_state() const;
+
 private:
     using clock = std::chrono::steady_clock;
 

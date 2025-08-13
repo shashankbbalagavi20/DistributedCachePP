@@ -1,4 +1,5 @@
 #include "cache.h"
+#include <iostream>
 
 Cache::Cache(size_t capacity) : capacity_(capacity){
     // Nothing else needed for now
@@ -67,9 +68,32 @@ std::optional<std::string> Cache::get(const std::string& key){
     return it->second.value; // Return the value
 }
 
+bool Cache::erase(const std::string& key){
+    auto it = map_.find(key);
+    if (it == map_.end()) return false;
+    lru_list_.erase(it->second.lru_it);
+    map_.erase(it);
+    return true;
+}
+
+size_t Cache::size() const {
+    return map_.size();
+}
+
 void Cache::touch_to_front(std::unordered_map<std::string, Entry>::iterator it){
     // Move the key to the front of the LRU list
     lru_list_.erase(it->second.lru_it);
     lru_list_.push_front(it->first);
     it->second.lru_it = lru_list_.begin(); 
 }
+
+// Optional helper for debugging
+void Cache::print_state() const {
+    std::cout << "Cache state (MRU -> LRU): ";
+    for(const auto& key : lru_list_) {
+        std::cout << key << " ";
+    }
+    std::cout << "\n";
+}
+
+
