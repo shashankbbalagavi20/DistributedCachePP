@@ -1,0 +1,45 @@
+name: C++ CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+jobs:
+    build-test:
+        name: Build and Test on ${{ matrix.os }}
+        runs-on: ${{ matrix.os }}
+
+        strategy:
+            matrix:
+                os: [ubuntu-latest, windows-latest, macos-latest]
+
+        steps:
+            # Step 1: Checkout the repository
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            # Step 2: Install CMake (pre-installed on most runners but ensure latest)
+            - name: Setup CMake
+              uses: jwlawson/actions-setup-cmake@v1
+              with:
+                cmake-version: '3.24.0'
+
+            # Step 3: Install dependencies (Linux only - Windows/macOS have compilers pre-installed)
+            - name: Install build tools (Linux)
+              if : runner.os == 'Linux'
+              run: sudo apt-get update && sudo apt-get install -y g++ make
+
+            # Step 4: Configure the build
+            - name: Configure project
+              run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+            # Step 5: Build the project
+            - name: Build project
+              run: cmake --build build --config Release
+
+            # Step 6: Run tests
+            - name: Run tests
+              run: ctest --test-dir build --output-on-failure
+
