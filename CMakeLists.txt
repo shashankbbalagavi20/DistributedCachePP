@@ -5,6 +5,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Force consistent MSVC runtime library across project + GoogleTest
+if (MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+endif()
+
 # Enable all warnings
 if (MSVC)
     add_compile_options(/W4 /permissive-)
@@ -25,6 +30,9 @@ FetchContent_Declare(
     URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.zip
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
+# Force GoogleTest to use same runtime library
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
 FetchContent_MakeAvailable(googletest)
 
 # Tests
