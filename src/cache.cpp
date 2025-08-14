@@ -5,6 +5,7 @@ Cache::Cache(size_t capacity) : capacity_(capacity){
     // Nothing else needed for now
 }
 
+// PRECONDITION: caller holds mutex_ with a unique_lock
 void Cache::evict_if_needed(){
     if(map_.size() <= capacity_){
         return;   // No eviction needed
@@ -26,6 +27,8 @@ void Cache::put(const std::string& key, const std::string& value, uint64_t ttl_m
     else{
         expiry_time = clock::time_point::max(); // Put expiry far in the future
     }
+
+    std::unique_lock<std::shared_mutex> lock(mutex_);
 
     // Check if key already exists
     auto it = map_.find(key);
@@ -51,6 +54,8 @@ void Cache::put(const std::string& key, const std::string& value, uint64_t ttl_m
 }
 
 std::optional<std::string> Cache::get(const std::string& key){
+    std::unique_lock<std::shared_mutex> lock(mutex_);
+
     auto it = map_.find(key);
     if(it == map_.end()){
         return std::nullopt; // key not found
@@ -69,6 +74,7 @@ std::optional<std::string> Cache::get(const std::string& key){
 }
 
 bool Cache::erase(const std::string& key){
+    std::unique_lock<std::shared_mutex> lock(mutex_);
     auto it = map_.find(key);
     if (it == map_.end()) return false;
     lru_list_.erase(it->second.lru_it);
@@ -77,9 +83,11 @@ bool Cache::erase(const std::string& key){
 }
 
 size_t Cache::size() const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     return map_.size();
 }
 
+// PRECONDITION: caller holds mutex_ with a unique_lock
 void Cache::touch_to_front(std::unordered_map<std::string, Entry>::iterator it){
     // Move the key to the front of the LRU list
     lru_list_.erase(it->second.lru_it);
@@ -89,11 +97,10 @@ void Cache::touch_to_front(std::unordered_map<std::string, Entry>::iterator it){
 
 // Optional helper for debugging
 void Cache::print_state() const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     std::cout << "Cache state (MRU -> LRU): ";
     for(const auto& key : lru_list_) {
         std::cout << key << " ";
     }
     std::cout << "\n";
 }
-
-

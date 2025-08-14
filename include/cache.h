@@ -7,6 +7,7 @@
 #include <list>
 #include <chrono>
 #include <optional>
+#include <shared_mutex>
 
 /**
  * Cache class with:
@@ -73,6 +74,7 @@ private:
      */
     void evict_if_needed();
 
+    mutable std::shared_mutex mutex_; // Protects map_, lru_list_, capacity_
     size_t capacity_; // Max allowed entries
     std::unordered_map<std::string, Entry> map_; // key -> Entry
     std::list<std::string> lru_list_; // keys in MRU -> LRU order
