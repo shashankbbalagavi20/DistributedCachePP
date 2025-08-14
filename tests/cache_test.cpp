@@ -56,14 +56,34 @@ TEST(CacheTest, ZeroCapacityCache) {
     EXPECT_FALSE(cache.get("A").has_value()); // Can't store anything
 }
 
-TEST(CacheTest, OverwriteKeyWithNewTTL) {
+TEST(CacheTest, OverwriteKeyWithNewTTL)
+{
+    using namespace std::chrono;
     Cache cache(2);
-    cache.put("A", "Apple", 50);
-    std::this_thread::sleep_for(30ms);
-    cache.put("A", "Apricot", 200); // Overwrite with longer TTL
-    std::this_thread::sleep_for(100ms);
 
-    EXPECT_EQ(cache.get("A").value(), "Apricot"); // Should still exist
+    // Initial TTL short
+    cache.put("A", "Apple", 50);
+    std::this_thread::sleep_for(20ms);
+
+    // Overwrite BEFORE first TTL expires, with a MUCH longer TTL
+    cache.put("A", "Apricot", 1000);  // 1s
+
+    // Immediately confirm overwrite took effect
+    auto v1 = cache.get("A");
+    ASSERT_TRUE(v1.has_value());
+    EXPECT_EQ(*v1, "Apricot");
+
+    // Wait well under the new TTL to avoid flakiness
+    std::this_thread::sleep_for(200ms);
+    auto v2 = cache.get("A");
+    ASSERT_TRUE(v2.has_value());
+    EXPECT_EQ(*v2, "Apricot");
+
+    // Prove it does expire after new TTL:
+    // Sleep until safely past the 1s TTL from the second put.
+    std::this_thread::sleep_for(900ms); // total ~1.1s after second put
+    auto v3 = cache.get("A");
+    EXPECT_FALSE(v3.has_value());
 }
 
 TEST(CacheTest, VeryLargeTTL) {

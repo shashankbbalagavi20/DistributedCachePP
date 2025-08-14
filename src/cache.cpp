@@ -33,14 +33,18 @@ void Cache::put(const std::string& key, const std::string& value, uint64_t ttl_m
 
     // Check if key already exists
     auto it = map_.find(key);
-    if(it != map_.end()){
-        // Update vale and expiry time
-        it->second.value = value;
-        it->second.expiry = expiry_time;
-
-        // Move key to the front of LRU list and do early exit
-        touch_to_front(it);
-        return;
+    if (it != map_.end()) {
+        // If the existing record is expired, remove then fall through to fresh insert
+        if (it->second.expiry != clock::time_point::max() && it->second.expiry < now) {
+            lru_list_.erase(it->second.lru_it);
+            map_.erase(it);
+        } else {
+            // Update existing
+            it->second.value = value;
+            it->second.expiry = expiry_time;
+            touch_to_front(it);
+            return;
+        }
     }
 
     // Insert new key at front of LRU list
