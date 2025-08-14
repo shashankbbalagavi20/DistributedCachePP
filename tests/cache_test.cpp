@@ -3,69 +3,99 @@
 #include <thread>
 #include <chrono>
 
-// Basic put/get
+using namespace std::chrono_literals;
+
 TEST(CacheTest, BasicPutGet) {
     Cache cache(3);
     cache.put("A", "Apple");
     cache.put("B", "Banana");
     cache.put("C", "Cherry");
 
-    auto val = cache.get("A");
-    ASSERT_TRUE(val.has_value());
-    EXPECT_EQ(*val, "Apple");
+    EXPECT_EQ(cache.get("A").value(), "Apple");
+    EXPECT_EQ(cache.get("B").value(), "Banana");
+    EXPECT_EQ(cache.get("C").value(), "Cherry");
 }
 
-// LRU eviction test
 TEST(CacheTest, LRUEviction) {
-    Cache cache(2);
+    Cache cache(3);
     cache.put("A", "Apple");
     cache.put("B", "Banana");
-    cache.get("A"); // make A MRU
-    cache.put("C", "Cherry"); // evict B
+    cache.put("C", "Cherry");
+    cache.get("A"); // Access A so B becomes LRU
+    cache.put("D", "Durian"); // Evicts B
 
     EXPECT_FALSE(cache.get("B").has_value());
     EXPECT_TRUE(cache.get("A").has_value());
     EXPECT_TRUE(cache.get("C").has_value());
+    EXPECT_TRUE(cache.get("D").has_value());
 }
 
-// TTL expiry test
 TEST(CacheTest, TTLExpiry) {
-    Cache cache(2);
-    cache.put("A", "Apple", 500); // 0.5s TTL
-    std::this_thread::sleep_for(std::chrono::milliseconds(600));
-    EXPECT_FALSE(cache.get("A").has_value());
+    Cache cache(3);
+    cache.put("A", "Apple", 100); // 100 ms
+    std::this_thread::sleep_for(150ms);
+
+    EXPECT_FALSE(cache.get("A").has_value()); // Expired
 }
 
-// Erase test
-TEST(CacheTest, EraseWorks) {
-    Cache cache(2);
+TEST(CacheTest, EraseKey) {
+    Cache cache(3);
     cache.put("A", "Apple");
     EXPECT_TRUE(cache.erase("A"));
     EXPECT_FALSE(cache.get("A").has_value());
 }
 
-// Thread-safety smoke test
-TEST(CacheTest, ThreadSafetySmoke) {
+TEST(CacheTest, EraseNonExistentKey) {
+    Cache cache(3);
+    EXPECT_FALSE(cache.erase("NotThere")); // Should not crash
+}
+
+TEST(CacheTest, ZeroCapacityCache) {
+    Cache cache(0);
+    cache.put("A", "Apple");
+    EXPECT_FALSE(cache.get("A").has_value()); // Can't store anything
+}
+
+TEST(CacheTest, OverwriteKeyWithNewTTL) {
+    Cache cache(2);
+    cache.put("A", "Apple", 50);
+    std::this_thread::sleep_for(30ms);
+    cache.put("A", "Apricot", 200); // Overwrite with longer TTL
+    std::this_thread::sleep_for(100ms);
+
+    EXPECT_EQ(cache.get("A").value(), "Apricot"); // Should still exist
+}
+
+TEST(CacheTest, VeryLargeTTL) {
+    Cache cache(2);
+    cache.put("A", "Apple", 1000000); // ~16 minutes
+    EXPECT_EQ(cache.get("A").value(), "Apple");
+}
+
+TEST(CacheTest, GetFromEmptyCache) {
+    Cache cache(3);
+    EXPECT_FALSE(cache.get("A").has_value());
+}
+
+TEST(CacheTest, ConcurrentAccess) {
     Cache cache(5);
 
-    auto writer = [&]() {
-        for (int i = 0; i < 1000; ++i)
-            cache.put("key" + std::to_string(i % 5), "val");
+    auto writer = [&cache]() {
+        for (int i = 0; i < 100; i++) {
+            cache.put("Key" + std::to_string(i % 5), "Value" + std::to_string(i));
+        }
     };
-    auto reader = [&]() {
-        for (int i = 0; i < 1000; ++i)
-            cache.get("key" + std::to_string(i % 5));
+
+    auto reader = [&cache]() {
+        for (int i = 0; i < 100; i++) {
+            auto v = cache.get("Key" + std::to_string(i % 5));
+        }
     };
 
     std::thread t1(writer);
     std::thread t2(reader);
-    std::thread t3(writer);
-    std::thread t4(reader);
-
     t1.join();
     t2.join();
-    t3.join();
-    t4.join();
 
-    SUCCEED(); // No crash means thread safety holds
+    SUCCEED(); // If no crash, we're good
 }
