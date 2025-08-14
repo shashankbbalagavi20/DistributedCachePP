@@ -3,6 +3,14 @@ project(DistributedCachePP LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Enable all warnings
+if (MSVC)
+    add_compile_options(/W4 /permissive-)
+else()
+    add_compile_options(-Wall -Wextra -pedantic -Werror)
+endif()
 
 # Source and include directories
 include_directories(include)

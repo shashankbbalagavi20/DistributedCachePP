@@ -1,5 +1,6 @@
 #include "cache.h"
-#include <iostream>
+#include <mutex>
+#include <shared_mutex>
 
 Cache::Cache(size_t capacity) : capacity_(capacity){
     // Nothing else needed for now
@@ -93,14 +94,4 @@ void Cache::touch_to_front(std::unordered_map<std::string, Entry>::iterator it){
     lru_list_.erase(it->second.lru_it);
     lru_list_.push_front(it->first);
     it->second.lru_it = lru_list_.begin(); 
-}
-
-// Optional helper for debugging
-void Cache::print_state() const {
-    std::shared_lock<std::shared_mutex> lock(mutex_);
-    std::cout << "Cache state (MRU -> LRU): ";
-    for(const auto& key : lru_list_) {
-        std::cout << key << " ";
-    }
-    std::cout << "\n";
 }

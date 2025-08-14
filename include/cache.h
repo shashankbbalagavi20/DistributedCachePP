@@ -7,6 +7,7 @@
 #include <list>
 #include <chrono>
 #include <optional>
+#include <mutex>
 #include <shared_mutex>
 
 /**
@@ -47,11 +48,6 @@ public:
      * Current number of entries
      */
     size_t size() const;
-
-    /**
-     * Debug helper: prints current cache order (MRU -> LRU)
-     */
-    void print_state() const;
 
 private:
     using clock = std::chrono::steady_clock;
