@@ -20,28 +20,27 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v3
 
-            # Step 2: Install CMake (pre-installed on most runners but ensure latest)
+            # Step 2: Install CMake
             - name: Setup CMake
               uses: jwlawson/actions-setup-cmake@v1
               with:
                 cmake-version: '3.24.0'
 
-            # Step 3: Install dependencies (Linux only - Windows/macOS have compilers pre-installed)
+            # Step 3: Install dependencies (Linux only)
             - name: Install build tools (Linux)
               if: runner.os == 'Linux'
               run: |
                 sudo apt-get update
                 sudo apt-get install -y g++ make libgtest-dev
 
-            # Step 4: Configure the build
+            # Step 4: Configure the build (force single-config everywhere)
             - name: Configure project
-              run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+              run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -G "Ninja"
 
             # Step 5: Build the project
             - name: Build project
-              run: cmake --build build --config Release
+              run: cmake --build build
 
             # Step 6: Run tests
             - name: Run tests
               run: ctest --test-dir build --output-on-failure
-
