@@ -1,5 +1,7 @@
 # DistributedCache++
 
+[![C++ CI](https://github.com/shashankbbalagavi20/DistributedCachePP/actions/workflows/ci.yml/badge.svg)](https://github.com/shashankbbalagavi20/DistributedCachePP/actions/workflows/ci.yml)
+
 **A production-grade C++17 distributed in-memory cache with LRU eviction, TTL expiration, leader–follower replication, sharding, REST API, and Prometheus metrics.**
 
 ---
