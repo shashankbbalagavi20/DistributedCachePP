@@ -28,8 +28,10 @@ jobs:
 
             # Step 3: Install dependencies (Linux only - Windows/macOS have compilers pre-installed)
             - name: Install build tools (Linux)
-              if : runner.os == 'Linux'
-              run: sudo apt-get update && sudo apt-get install -y g++ make
+              if: runner.os == 'Linux'
+              run: |
+                sudo apt-get update
+                sudo apt-get install -y g++ make libgtest-dev
 
             # Step 4: Configure the build
             - name: Configure project
