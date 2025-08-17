@@ -1,9 +1,23 @@
 #include "cache.h"
 #include <mutex>
 #include <shared_mutex>
+#include "algorithm"
 
-Cache::Cache(size_t capacity) : capacity_(capacity){
-    // Nothing else needed for now
+Cache::Cache(size_t capacity, uint64_t eviction_interval_ms) : 
+        capacity_(capacity), eviction_interval_ms_(eviction_interval_ms)
+{
+    // Start async eviction thread
+    eviction_thread_ = std::thread([this, eviction_interval_ms]() {
+        eviction_loop(eviction_interval_ms);
+    });
+}
+
+Cache::~Cache(){
+    // Signal stop and join background thread
+    stop_eviction_.store(true);
+    if(eviction_thread_.joinable()){
+        eviction_thread_.join();
+    }
 }
 
 // PRECONDITION: caller holds mutex_ with a unique_lock
@@ -98,4 +112,54 @@ void Cache::touch_to_front(std::unordered_map<std::string, Entry>::iterator it){
     lru_list_.erase(it->second.lru_it);
     lru_list_.push_front(it->first);
     it->second.lru_it = lru_list_.begin(); 
+}
+
+// This method does not check for the TTL, just does raw check if it is present in cache
+bool Cache::contains(const std::string& key) const{
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    return map_.find(key) != map_.end();
+}
+
+// This method does not check for the TTL.
+std::vector<std::string> Cache::keys() const{
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    std::vector<std::string> result;
+    result.reserve(map_.size());
+    for(const auto& k : lru_list_){
+        result.push_back(k);
+    }
+    return result;
+}
+
+void Cache::clear() {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
+    map_.clear();
+    lru_list_.clear();
+}
+
+size_t Cache::capacity() const {
+    return capacity_;
+}
+
+uint64_t Cache::eviction_interval() const {
+    return eviction_interval_ms_;
+}
+
+// Async eviction
+void Cache::eviction_loop(uint64_t interval_ms){
+    while(!stop_eviction_.load()){
+        std::this_thread::sleep_for(std::chrono::milliseconds(interval_ms));
+
+        auto now = clock::now();
+        std::unique_lock<std::shared_mutex> lock(mutex_);
+
+        for(auto it = map_.begin(); it!=map_.end();){
+            if (it->second.expiry != clock::time_point::max() && it->second.expiry < now) {
+                lru_list_.erase(it->second.lru_it);
+                it = map_.erase(it); // erase returns next iterator
+            } else {
+                ++it;
+            }
+        }
+    }
 }
