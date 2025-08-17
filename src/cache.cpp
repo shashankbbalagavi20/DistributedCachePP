@@ -1,9 +1,23 @@
 #include "cache.h"
 #include <mutex>
 #include <shared_mutex>
+#include "algorithm"
 
-Cache::Cache(size_t capacity) : capacity_(capacity){
-    // Nothing else needed for now
+Cache::Cache(size_t capacity, uint64_t eviction_interval_ms) : 
+        capacity_(capacity), eviction_interval_ms_(eviction_interval_ms)
+{
+    // Start async eviction thread
+    eviction_thread_ = std::thread([this, eviction_interval_ms]() {
+        eviction_loop(eviction_interval_ms);
+    });
+}
+
+Cache::~Cache(){
+    // Signal stop and join background thread
+    stop_eviction_.store(true);
+    if(eviction_thread_.joinable()){
+        eviction_thread_.join();
+    }
 }
 
 // PRECONDITION: caller holds mutex_ with a unique_lock
@@ -115,4 +129,37 @@ std::vector<std::string> Cache::keys() const{
         result.push_back(k);
     }
     return result;
+}
+
+void Cache::clear() {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
+    map_.clear();
+    lru_list_.clear();
+}
+
+size_t Cache::capacity() const {
+    return capacity_;
+}
+
+uint64_t Cache::eviction_interval() const {
+    return eviction_interval_ms_;
+}
+
+// Async eviction
+void Cache::eviction_loop(uint64_t interval_ms){
+    while(!stop_eviction_.load()){
+        std::this_thread::sleep_for(std::chrono::milliseconds(interval_ms));
+
+        auto now = clock::now();
+        std::unique_lock<std::shared_mutex> lock(mutex_);
+
+        for(auto it = map_.begin(); it!=map_.end();){
+            if (it->second.expiry != clock::time_point::max() && it->second.expiry < now) {
+                lru_list_.erase(it->second.lru_it);
+                it = map_.erase(it); // erase returns next iterator
+            } else {
+                ++it;
+            }
+        }
+    }
 }

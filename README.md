@@ -146,6 +146,8 @@ Returns Prometheus-formatted metrics.
 
 - [x] Thread-safe concurrency
 
+- [x] Async eviction
+
 - [x] REST API
 
 - [x] Leader–follower replication

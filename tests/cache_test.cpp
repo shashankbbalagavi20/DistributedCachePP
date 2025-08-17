@@ -163,3 +163,36 @@ TEST(CacheAsyncEvictionTest, EvictsOnlyExpiredKey){
     ASSERT_EQ(keys.size(), 1);
     EXPECT_EQ(keys[0], "long");
 }
+
+//-------------------Extra Utility Tests-------------------
+
+TEST(CacheUtilityTest, ClearRemovesAllKeys) {
+    Cache cache(3);
+    cache.put("A", "Apple");
+    cache.put("B", "Banana");
+    cache.put("C", "Cherry");
+
+    ASSERT_EQ(cache.size(), 3);
+
+    cache.clear();
+    EXPECT_EQ(cache.size(), 0);
+    EXPECT_FALSE(cache.get("A").has_value());
+    EXPECT_FALSE(cache.get("B").has_value());
+    EXPECT_FALSE(cache.get("C").has_value());
+}
+
+TEST(CacheUtilityTest, CapacityReturnsConfiguredValue) {
+    Cache cache(5);
+    EXPECT_EQ(cache.capacity(), 5);
+
+    Cache cache2(10);
+    EXPECT_EQ(cache2.capacity(), 10);
+}
+
+TEST(CacheUtilityTest, EvictionIntervalReturnsConfiguredValue) {
+    Cache cache(5, 250); // 250ms eviction interval
+    EXPECT_EQ(cache.eviction_interval(), 250);
+
+    Cache defaultCache(5); // default should be 100ms
+    EXPECT_EQ(defaultCache.eviction_interval(), 100);
+}
