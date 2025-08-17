@@ -49,6 +49,12 @@ public:
      */
     size_t size() const;
 
+    // Returns true if key exists (ignores TTL check, for async eviction testing)
+    bool contains(const std::string& key) const;
+
+    // Returns a snapshot of all keys currently in the cache
+    std::vector<std::string> keys() const;
+
 private:
     using clock = std::chrono::steady_clock;
 

@@ -99,3 +99,20 @@ void Cache::touch_to_front(std::unordered_map<std::string, Entry>::iterator it){
     lru_list_.push_front(it->first);
     it->second.lru_it = lru_list_.begin(); 
 }
+
+// This method does not check for the TTL, just does raw check if it is present in cache
+bool Cache::contains(const std::string& key) const{
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    return map_.find(key) != map_.end();
+}
+
+// This method does not check for the TTL.
+std::vector<std::string> Cache::keys() const{
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    std::vector<std::string> result;
+    result.reserve(map_.size());
+    for(const auto& k : lru_list_){
+        result.push_back(k);
+    }
+    return result;
+}

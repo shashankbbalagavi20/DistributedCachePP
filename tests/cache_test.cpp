@@ -119,3 +119,47 @@ TEST(CacheTest, ConcurrentAccess) {
 
     SUCCEED(); // If no crash, we're good
 }
+
+//-------------------Async Eviction Tests-------------------
+
+TEST(CacheAsyncEvictionTest, EvictsExpiredKey){
+    Cache cache(10);
+
+    // Insert with very short TTL
+    cache.put("A", "expired", 100); // TTL = 100 ms
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    EXPECT_FALSE(cache.contains("A")); // shall be removed
+    EXPECT_EQ(cache.size(), 0);  // cache shall be empty
+}
+
+TEST(CacheAsyncEvictionTest, KeepsUnexpiredKey){
+    Cache cache(10);
+
+    cache.put("A", "alive", 1000); // 1 second
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    EXPECT_TRUE(cache.contains("A")); // should be alive
+    EXPECT_EQ(cache.size(), 1);
+
+    auto keys = cache.keys();
+    ASSERT_EQ(keys.size(), 1);
+    EXPECT_EQ(keys[0], "A");
+}
+
+TEST(CacheAsyncEvictionTest, EvictsOnlyExpiredKey){
+    Cache cache(10);
+    
+    cache.put("short", "S", 100); // expires short
+    cache.put("long", "L", 1000); // expires long
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    EXPECT_FALSE(cache.contains("short"));
+    ASSERT_TRUE(cache.contains("long"));
+    EXPECT_EQ(cache.size(), 1);
+
+    auto keys = cache.keys();
+    ASSERT_EQ(keys.size(), 1);
+    EXPECT_EQ(keys[0], "long");
+}
