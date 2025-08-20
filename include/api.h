@@ -26,6 +26,10 @@ public:
     void start(const std::string& host, int port);
 
 private:
+    /**
+     * Log an incoming request with method, path, and status code
+     */
+    void logRequest(const std::string& method, const std::string& path, int status);
     std::shared_ptr<Cache> cache_;
     httplib::Server server_;
 };

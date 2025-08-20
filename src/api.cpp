@@ -11,8 +11,36 @@ CacheAPI::CacheAPI(std::shared_ptr<Cache> cache) : cache_(std::move(cache)) {}
 void CacheAPI::logRequest(const std::string& method, const std::string& path, int status)
 {
     auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    std::cerr << "[" << std::put_time(std::localtime(&now), "%F %T") << "] "
+    std::tm tm_buf;
+    localtime_s(&tm_buf, &now);
+    std::cerr << "[" << std::put_time(&tm_buf, "%F %T") << "] "
     << method << " " << path << " -> " << status << std::endl;
+}
+
+static std::string make_prometheus_metrics(const Cache &cache)
+{
+    std::ostringstream ss;
+    ss << "# HELP cache_hits_total Total number of cache hits\n";
+    ss << "# TYPE cache_hits_total counter\n";
+    ss << "cache_hits_total " << cache.hits() << "\n\n";
+
+    ss << "# HELP cache_misses_total Total number of cache misses\n";
+    ss << "# TYPE cache_misses_total counter\n";
+    ss << "cache_misses_total " << cache.misses() << "\n\n";
+
+    ss << "# HELP cache_size Number of items currently stored in cache\n";
+    ss << "# TYPE cache_size gauge\n";
+    ss << "cache_size " << cache.size() << "\n\n";
+
+    ss << "# HELP cache_capacity Configured cache capacity\n";
+    ss << "# TYPE cache_capacity gauge\n";
+    ss << "cache_capacity " << cache.capacity() << "\n\n";
+
+    ss << "# HELP cache_eviction_interval_ms Async eviction interval in ms\n";
+    ss << "# TYPE cache_eviction_interval_ms gauge\n";
+    ss << "cache_eviction_interval_ms " << cache.eviction_interval() << "\n";
+
+    return ss.str();
 }
 
 void CacheAPI::start(const std::string& host, int port){
@@ -68,6 +96,14 @@ void CacheAPI::start(const std::string& host, int port){
             res.set_content(R"({"error": "not found"})", "application/json");
         }
         logRequest("DELETE", req.path, res.status);
+    });
+
+    // METRICS endpoint (Prometheus plain text)
+    server_.Get("/metrics", [this](const httplib::Request& req, httplib::Response& res) {
+        auto body = make_prometheus_metrics(*cache_);
+        res.set_content(body, "text/plain; version=0.0.4; charset=utf-8");
+        res.status = 200;
+        logRequest("GET", req.path, res.status);
     });
 
     // Start server

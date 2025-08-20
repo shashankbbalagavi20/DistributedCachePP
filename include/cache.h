@@ -19,6 +19,7 @@
  * - TTL expiration (per key, in ms)
  * - Async background eviction (thread removes expired keys periodically)
  * - O(1) average complexity for get/put
+ * - Basic metrics: cache hits & misses
  */
 class Cache {
 public:
@@ -48,6 +49,7 @@ public:
 
     /**
      * Get value if present and not expired.
+     * Increments hit/miss counters for metrics.
      * @param key Key to fetch
      * @return std::optional containing value if hit, empty if miss
      */
@@ -91,6 +93,16 @@ public:
     */ 
     uint64_t eviction_interval() const;
 
+    /**
+     * @return Number of successful cache hits
+     */
+    size_t hits() const;
+
+    /**
+     * @return Number of cache misses
+     */
+    size_t misses() const;
+
 private:
     // ---------------- Internal types ----------------
 
@@ -121,6 +133,10 @@ private:
     std::thread eviction_thread_;
     std::atomic<bool> stop_eviction_{false};
     uint64_t eviction_interval_ms_;
+
+    // Metrics
+    std::atomic<size_t> hits_{0};               ///< Count of cache hits
+    std::atomic<size_t> misses_{0};            ///< Count of cache misses
 };
 
 #endif // CACHE_H
