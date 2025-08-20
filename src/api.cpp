@@ -3,6 +3,7 @@
 #include <iostream>
 #include <chrono>
 #include <ctime>
+#include <time_utils.h>
 
 using json = nlohmann::json;
 
@@ -11,8 +12,7 @@ CacheAPI::CacheAPI(std::shared_ptr<Cache> cache) : cache_(std::move(cache)) {}
 void CacheAPI::logRequest(const std::string& method, const std::string& path, int status)
 {
     auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    std::tm tm_buf;
-    localtime_s(&tm_buf, &now);
+    std::tm tm_buf = safe_localtime(now);
     std::cerr << "[" << std::put_time(&tm_buf, "%F %T") << "] "
     << method << " " << path << " -> " << status << std::endl;
 }
