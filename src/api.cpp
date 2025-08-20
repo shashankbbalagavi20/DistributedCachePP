@@ -1,9 +1,19 @@
 #include "api.h"
 #include <nlohmann/json.hpp>
+#include <iostream>
+#include <chrono>
+#include <ctime>
 
 using json = nlohmann::json;
 
 CacheAPI::CacheAPI(std::shared_ptr<Cache> cache) : cache_(std::move(cache)) {}
+
+void CacheAPI::logRequest(const std::string& method, const std::string& path, int status)
+{
+    auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::cerr << "[" << std::put_time(std::localtime(&now), "%F %T") << "] "
+    << method << " " << path << " -> " << status << std::endl;
+}
 
 void CacheAPI::start(const std::string& host, int port){
     // GET /cache/<key>
@@ -17,6 +27,7 @@ void CacheAPI::start(const std::string& host, int port){
             res.status = 404; // Not Found
             res.set_content(R"({"error": "not found"})", "application/json");
         }
+        logRequest("GET", req.path, res.status);
     });
 
     // PUT /cache/<key>
@@ -43,6 +54,7 @@ void CacheAPI::start(const std::string& host, int port){
             res.status = 400;
             res.set_content(std::string{"{\"error\": \""} + e.what() + "\"}", "application/json");
         }
+        logRequest("PUT", req.path, res.status);
     });
 
     // DELETE /cache/<key>
@@ -55,8 +67,10 @@ void CacheAPI::start(const std::string& host, int port){
             res.status = 404;
             res.set_content(R"({"error": "not found"})", "application/json");
         }
+        logRequest("DELETE", req.path, res.status);
     });
 
     // Start server
+    std::cerr << "🚀 Starting REST API on " << host << ":" << port << std::endl;
     server_.listen(host.c_str(), port);
 }
