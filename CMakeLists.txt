@@ -20,9 +20,6 @@ endif()
 # Source and include directories
 include_directories(include)
 
-# Library directories
-add_library(cache src/cache.cpp)
-
 # Fetch GoogleTest
 include(FetchContent)
 FetchContent_Declare(
@@ -54,27 +51,32 @@ if(NOT json_POPULATED)
     set(JSON_INCLUDE_DIR ${json_SOURCE_DIR}/single_include CACHE INTERNAL "")
 endif()
 
-# ------------- Library -----------------
-add_library(cache
-src/cache.cpp
-src/api.cpp
- # add src/metrics.cpp when ready
-)
-target_include_directories(cache PRIVATE ${JSON_INCLUDE_DIR} include)
-target_link_libraries(cache PRIVATE cache httplib::httplib)
+# ---------------- Library ----------------
+add_library(DistributedCacheLib src/cache.cpp)
+target_include_directories(DistributedCacheLib PUBLIC include)
 
-# Add pthread only on UNIX
+# ---------------- Main Server Binary ----------------
+add_executable(DistributedCachePP src/main.cpp src/api.cpp)
+target_include_directories(DistributedCachePP PRIVATE ${JSON_INCLUDE_DIR} include)
+target_link_libraries(DistributedCachePP PRIVATE DistributedCacheLib httplib::httplib)
+
 if(UNIX)
     target_link_libraries(DistributedCachePP PRIVATE pthread)
 endif()
 
-# ---------- Main Server ----------
-add_executable(DistributedCachePP src/main.cpp)
-target_link_libraries(DistributedCachePP PRIVATE cache)
-
-# ---------- Tests ----------
+# ---------------- Tests ----------------
 enable_testing()
-file(GLOB TEST_SOURCES tests/*.cpp)   # automatically pick up all test files
-add_executable(UnitTests ${TEST_SOURCES})
-target_link_libraries(UnitTests PRIVATE cache gtest_main)
-add_test(NAME UnitTests COMMAND UnitTests)
+
+# Cache unit tests
+add_executable(CacheTests tests/cache_test.cpp)
+target_link_libraries(CacheTests PRIVATE DistributedCacheLib gtest_main)
+add_test(NAME CacheTests COMMAND CacheTests)
+
+# API integration tests
+add_executable(ApiTests tests/api_test.cpp src/api.cpp)
+target_include_directories(ApiTests PRIVATE ${JSON_INCLUDE_DIR} include)
+target_link_libraries(ApiTests PRIVATE DistributedCacheLib httplib::httplib gtest_main)
+if(UNIX)
+    target_link_libraries(ApiTests PRIVATE pthread)
+endif()
+add_test(NAME ApiTests COMMAND ApiTests)
