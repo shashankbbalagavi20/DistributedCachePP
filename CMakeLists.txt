@@ -54,18 +54,27 @@ if(NOT json_POPULATED)
     set(JSON_INCLUDE_DIR ${json_SOURCE_DIR}/single_include CACHE INTERNAL "")
 endif()
 
-# Main Server binary
-add_executable(DistributedCachePP src/main.cpp src/api.cpp)
-target_include_directories(DistributedCachePP PRIVATE ${JSON_INCLUDE_DIR} include)
-target_link_libraries(DistributedCachePP PRIVATE cache httplib::httplib)
+# ------------- Library -----------------
+add_library(cache
+src/cache.cpp
+src/api.cpp
+ # add src/metrics.cpp when ready
+)
+target_include_directories(cache PRIVATE ${JSON_INCLUDE_DIR} include)
+target_link_libraries(cache PRIVATE cache httplib::httplib)
 
 # Add pthread only on UNIX
 if(UNIX)
     target_link_libraries(DistributedCachePP PRIVATE pthread)
 endif()
 
-# Tests
+# ---------- Main Server ----------
+add_executable(DistributedCachePP src/main.cpp)
+target_link_libraries(DistributedCachePP PRIVATE cache)
+
+# ---------- Tests ----------
 enable_testing()
-add_executable(CacheTests tests/cache_test.cpp)
-target_link_libraries(CacheTests PRIVATE cache gtest_main)
-add_test(NAME CacheTests COMMAND CacheTests)
+file(GLOB TEST_SOURCES tests/*.cpp)   # automatically pick up all test files
+add_executable(UnitTests ${TEST_SOURCES})
+target_link_libraries(UnitTests PRIVATE cache gtest_main)
+add_test(NAME UnitTests COMMAND UnitTests)
