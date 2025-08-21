@@ -15,7 +15,7 @@ TEST(ApiTest, BasicCRUD){
     });
 
     // Give server time to start
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     httplib::Client cli("127.0.0.1", 5001);
 
@@ -47,7 +47,7 @@ TEST(ApiTest, BasicCRUD){
     EXPECT_EQ(metrics_res->status, 200);
     EXPECT_NE(metrics_res->body.find("cache_hits_total"), std::string::npos);
 
-    // Cleanup
-    // Stop server by terminating the process
-    std::terminate(); // For now: abrupt exit to stop blocking server thread
+    // Clean shutdown
+    api.stop();
+    server_thread.join();
 }

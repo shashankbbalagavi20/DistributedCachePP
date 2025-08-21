@@ -25,6 +25,10 @@ public:
      */
     void start(const std::string& host, int port);
 
+    /**
+     * Stop the HTTP server
+     */
+    void stop();
 private:
     /**
      * Log an incoming request with method, path, and status code

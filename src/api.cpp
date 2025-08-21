@@ -110,3 +110,9 @@ void CacheAPI::start(const std::string& host, int port){
     std::cerr << "🚀 Starting REST API on " << host << ":" << port << std::endl;
     server_.listen(host.c_str(), port);
 }
+
+// ✅ New stop() method so tests can cleanly shut down the server
+void CacheAPI::stop()
+{
+    server_.stop();
+}
