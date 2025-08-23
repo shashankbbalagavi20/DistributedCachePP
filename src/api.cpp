@@ -51,6 +51,7 @@ void CacheAPI::start(const std::string& host, int port){
         if(val.has_value()){
             json j = {{"value", val.value()}};
             res.set_content(j.dump(), "application/json");
+            res.status = 200;
         } else {
             res.status = 404; // Not Found
             res.set_content(R"({"error": "not found"})", "application/json");
@@ -77,6 +78,7 @@ void CacheAPI::start(const std::string& host, int port){
 
             cache_->put(key, value, ttl);
             res.set_content(R"({"status": "ok"})", "application/json");
+            res.status = 200;
         }
         catch (const std::exception& e) {
             res.status = 400;
@@ -90,6 +92,7 @@ void CacheAPI::start(const std::string& host, int port){
         auto key = req.matches[1];
         if(cache_->erase(key)){
             res.set_content(R"({"status": "deleted"})", "application/json");
+            res.status = 200;
         }
         else{
             res.status = 404;
@@ -107,8 +110,16 @@ void CacheAPI::start(const std::string& host, int port){
     });
 
     // Start server
-    std::cerr << "🚀 Starting REST API on " << host << ":" << port << std::endl;
-    server_.listen(host.c_str(), port);
+std::cerr << "🚀 Starting REST API on " << host << ":" << port << std::endl;
+
+// Bind explicitly so tests don’t race
+if (!server_.bind_to_port(host.c_str(), port)) {
+    throw std::runtime_error("Failed to bind server to port");
+}
+
+// Run server loop (non-blocking in its own thread)
+server_.listen_after_bind();
+
 }
 
 // ✅ New stop() method so tests can cleanly shut down the server

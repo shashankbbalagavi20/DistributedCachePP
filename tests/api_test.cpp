@@ -1,9 +1,12 @@
 #include <gtest/gtest.h>
 #include <thread>
+#include <nlohmann/json.hpp>
 #include <chrono>
 #include "../include/cache.h"
 #include "../include/api.h"
 #include <httplib.h>
+
+using json = nlohmann::json;
 
 TEST(ApiTest, BasicCRUD){
     auto cache = std::make_shared<Cache>(10);
@@ -23,23 +26,31 @@ TEST(ApiTest, BasicCRUD){
     auto put_res = cli.Put("/cache/foo", "{\"value\":\"bar\",\"ttl\":500}", "application/json");
     ASSERT_TRUE(put_res != nullptr);
     EXPECT_EQ(put_res->status, 200);
-    EXPECT_NE(put_res->body.find("\"status\":\"ok\""), std::string::npos);
+
+    json put_json = json::parse(put_res->body);
+    EXPECT_EQ(put_json["status"], "ok");
 
     // GET
     auto get_res = cli.Get("/cache/foo");
     ASSERT_TRUE(get_res != nullptr);
     EXPECT_EQ(get_res->status, 200);
-    EXPECT_NE(get_res->body.find("\"bar\""), std::string::npos);
+
+    json get_json = json::parse(get_res->body);
+    EXPECT_EQ(get_json["value"], "bar");
 
     // DELETE
     auto del_res = cli.Delete("/cache/foo");
     ASSERT_TRUE(del_res != nullptr);
-    EXPECT_EQ(del_res->status, 200);
+
+    json del_json = json::parse(del_res->body);
+    EXPECT_EQ(del_json["status"], "deleted");
 
     // GET again (should be 404)
     auto get_res2 = cli.Get("/cache/foo");
     ASSERT_TRUE(get_res2 != nullptr);
-    EXPECT_EQ(get_res2->status, 404);
+
+    json get2_json = json::parse(get_res2->body);
+    EXPECT_EQ(get2_json["error"], "not found");
 
     // Check metrics
     auto metrics_res = cli.Get("/metrics");
