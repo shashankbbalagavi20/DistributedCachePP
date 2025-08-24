@@ -77,6 +77,7 @@ std::optional<std::string> Cache::get(const std::string& key){
 
     auto it = map_.find(key);
     if(it == map_.end()){
+        misses_++;
         return std::nullopt; // key not found
     }
 
@@ -85,10 +86,12 @@ std::optional<std::string> Cache::get(const std::string& key){
         // Key is expired
         lru_list_.erase(it->second.lru_it); // Remove from LRU list
         map_.erase(it); // Remove from map
+        misses_++;
         return std::nullopt;  // Return empty optional
     }
 
     touch_to_front(it); // Move to front of LRU List
+    hits_++; 
     return it->second.value; // Return the value
 }
 
@@ -143,6 +146,14 @@ size_t Cache::capacity() const {
 
 uint64_t Cache::eviction_interval() const {
     return eviction_interval_ms_;
+}
+
+size_t Cache::hits() const {
+    return hits_.load();
+}
+
+size_t Cache::misses() const {
+    return misses_.load();
 }
 
 // Async eviction
