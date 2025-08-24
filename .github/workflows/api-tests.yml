@@ -5,8 +5,6 @@ on:
     workflows: ["C++ CI Build and Unit Tests"]
     types:
       - completed
-    branches:
-      - main
 
 jobs:
   api-tests:
@@ -25,7 +23,7 @@ jobs:
         with:
           cmake-version: '3.24.0'
 
-      # Step 3: Install dependencies (Linux only)
+      # Step 3: Install dependencies
       - name: Install build tools (Linux)
         run: |
           sudo apt-get update
@@ -35,14 +33,13 @@ jobs:
       - name: Configure project
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -G "Ninja"
 
-      # Step 5: Build the project 
+      # Step 5: Build the project
       - name: Build project
         run: cmake --build build
 
       # Step 6: Run API Tests with curl
       - name: Run API Tests with curl
         run: |
-          # Start the server in the background
           ./build/DistributedCachePP --host 127.0.0.1 --port 5001 &
           SERVER_PID=$!
           sleep 2
@@ -73,5 +70,4 @@ jobs:
           echo "🔹 GET metrics"
           curl -s http://127.0.0.1:5001/metrics | grep "cache_hits_total"
 
-          # Stop server
           kill $SERVER_PID
