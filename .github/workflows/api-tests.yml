@@ -1,64 +1,73 @@
 name: CI - API Tests
 
-on: 
-    workflow_run:
-        workflows: ["C++ CI Build and Unit Tests"]
-        types:
-            - completed
+on:
+  workflow_run:
+    workflows: ["C++ CI Build and Unit Tests"]
+    types:
+      - completed
 
 jobs:
-    api-tests:
-        name: REST API (cURL) Tests
-        runs-on: ubuntu-latest
-        if: ${{ github.event.workflow_run.conclusion == 'success' }}
-        
-        steps:
-            # Step 1: Checkout the repository
-            - name: Checkout code
-              uses: actions/checkout@v3
+  api-tests:
+    name: REST API (cURL) Tests
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
-            # Step 2: Install CMake
-            - name: Setup CMake
-              uses: jwlawson/actions-setup-cmake@v1
-              with:
-                cmake-version: '3.24.0'
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-            # Step 3: Install dependencies (Linux only)
-            - name: Install build tools (Linux)
-              run: |
-                sudo apt-get update
-                sudo apt-get install -y g++ make libgtest-dev
+      # Step 2: Install CMake
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v1
+        with:
+          cmake-version: '3.24.0'
 
-            # Step 4: Configure the build (force single-config everywhere)
-            - name: Configure project
-              run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -G "Ninja"
+      # Step 3: Install dependencies (Linux only)
+      - name: Install build tools (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++ make libgtest-dev
 
-            # Step 5: Build the project 
-            - name: Build project
-              run: cmake --build build
+      # Step 4: Configure the build
+      - name: Configure project
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -G "Ninja"
 
-            # Step 6: Start the API tests
-            - name: Run API Tests with curl
-              run: |
-                # Start the server in the background
-                ./build/DistributedCachePP --host 127.0.0.1 --port 5001 &
-                SERVER_PID=$!
-                sleep 2
+      # Step 5: Build the project
+      - name: Build project
+        run: cmake --build build
 
-                echo "🔹 PUT foo=bar"
-                curl -s -X PUT http://127.0.0.1:5001/cache/foo \ -H "Content-Type: application/json" -d '{"value":"bar","ttl":500}' | tee output.json grep '"status":"ok"' output.json
+      # Step 6: Run API Tests with curl
+      - name: Run API Tests with curl
+        run: |
+          ./build/DistributedCachePP --host 127.0.0.1 --port 5001 &
+          SERVER_PID=$!
+          sleep 2
 
-                echo "🔹 GET foo"
-                curl -s http://127.0.0.1:5001/cache/foo | grep "bar"
+          echo "🔹 PUT foo=bar"
+          curl -s -X PUT http://127.0.0.1:5001/cache/foo \
+            -H "Content-Type: application/json" \
+            -d '{"value":"bar","ttl":500}' | tee output.json
+          grep '"status":"ok"' output.json
 
-                echo "🔹 DELETE foo"
-                curl -s -X DELETE http://127.0.0.1:5001/cache/foo | grep "deleted"
+          echo "🔹 GET foo"
+          curl -s http://127.0.0.1:5001/cache/foo | grep "bar"
 
-                echo "🔹 GET foo (expect 404)" STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5001/cache/foo) test "$STATUS" -eq 404
+          echo "🔹 DELETE foo"
+          curl -s -X DELETE http://127.0.0.1:5001/cache/foo | grep "deleted"
 
-                echo "🔹 PUT malformed JSON (expect 400)" STATUS=$(curl -s -o /dev/null -w "%{http_code}" \ -X PUT http://127.0.0.1:5001/cache/bad \ -H "Content-Type: application/json" \ -d '{"value": }') test "$STATUS" -eq 400
+          echo "🔹 GET foo (expect 404)"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5001/cache/foo)
+          test "$STATUS" -eq 404
 
-                echo "🔹 GET metrics"
-                curl -s http://127.0.0.1:5001/metrics | grep "cache_hits_total"
+          echo "🔹 PUT malformed JSON (expect 400)"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X PUT http://127.0.0.1:5001/cache/bad \
+            -H "Content-Type: application/json" \
+            -d '{"value": }')
+          test "$STATUS" -eq 400
 
-                kill $SERVER_PID
+          echo "🔹 GET metrics"
+          curl -s http://127.0.0.1:5001/metrics | grep "cache_hits_total"
+
+          kill $SERVER_PID
