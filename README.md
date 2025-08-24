@@ -23,6 +23,11 @@ The system supports:
 - **Prometheus metrics** for observability
 
 ---
+## 🔍 CI Status
+
+- ✅ **Unit tests** run on **Linux, macOS, and Windows**.  
+- ✅ **API integration tests** verify REST endpoints using `curl`.
+---
 
 ## ✨ Features
 

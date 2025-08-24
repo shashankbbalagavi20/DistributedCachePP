@@ -62,3 +62,19 @@ TEST(ApiTest, BasicCRUD){
     api.stop();
     server_thread.join();
 }
+
+TEST(ApiTest, InvalidPut) {
+    auto cache = std::make_shared<Cache>(10);
+    CacheAPI api(cache);
+    std::thread server_thread([&api]() { api.start("127.0.0.1", 5002); });
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    httplib::Client cli("127.0.0.1", 5002);
+    auto res = cli.Put("/cache/foo", "not-json", "application/json");
+
+    ASSERT_TRUE(res != nullptr);
+    EXPECT_EQ(res->status, 400);
+
+    api.stop();
+    server_thread.join();
+}
