@@ -1,43 +1,37 @@
 name: CI - API Tests
 
 on:
-  push:
-    branches: ["*"]
-  pull_request:
-    branches: ["*"]
+  push:                 # run on any push to main
+    branches: [ main ]
+  pull_request:         # run on PRs targeting main
+    branches: [ main ]
+  workflow_dispatch:    # allow manual trigger
 
 jobs:
   api-tests:
     name: REST API (cURL) Tests
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      # Step 1: Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Install CMake
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v1
         with:
           cmake-version: '3.24.0'
 
-      # Step 3: Install dependencies
-      - name: Install build tools (Linux)
+      - name: Install build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y g++ make libgtest-dev
+          sudo apt-get install -y g++ make libgtest-dev curl
 
-      # Step 4: Configure the build
       - name: Configure project
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -G "Ninja"
 
-      # Step 5: Build the project
       - name: Build project
         run: cmake --build build
 
-      # Step 6: Run API Tests with curl
       - name: Run API Tests with curl
         run: |
           ./build/DistributedCachePP --host 127.0.0.1 --port 5001 &
@@ -47,8 +41,7 @@ jobs:
           echo "🔹 PUT foo=bar"
           curl -s -X PUT http://127.0.0.1:5001/cache/foo \
             -H "Content-Type: application/json" \
-            -d '{"value":"bar","ttl":500}' | tee output.json
-          grep '"status":"ok"' output.json
+            -d '{"value":"bar","ttl":500}' | grep '"status":"ok"'
 
           echo "🔹 GET foo"
           curl -s http://127.0.0.1:5001/cache/foo | grep "bar"
