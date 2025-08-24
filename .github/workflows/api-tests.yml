@@ -2,7 +2,7 @@ name: CI - API Tests
 
 on:
   workflow_run:
-    workflows: ["C++ CI Build and Unit Tests"]
+    workflows: ["c++ ci build and unit tests"]
     types:
       - completed
 

@@ -1,4 +1,4 @@
-name: C++ CI Build and Unit Tests
+name: c++ ci build and unit tests
 
 on:
     push:
