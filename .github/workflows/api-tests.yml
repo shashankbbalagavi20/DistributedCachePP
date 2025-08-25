@@ -39,9 +39,11 @@ jobs:
           sleep 2
 
           echo "🔹 PUT foo=bar"
-          curl -s -X PUT http://127.0.0.1:5000/cache/foo \
+          PUT_RES=$(curl -s -X PUT http://127.0.0.1:5000/cache/foo \
             -H "Content-Type: application/json" \
-            -d '{"value":"bar","ttl":500}' | grep '"status":"ok"'
+            -d '{"value":"bar","ttl":500}')
+          echo "$PUT_RES"
+          echo "$PUT_RES" | grep '"status"[[:space:]]*:[[:space:]]*"ok"'
 
           echo "🔹 GET foo"
           curl -s http://127.0.0.1:5000/cache/foo | grep "bar"
