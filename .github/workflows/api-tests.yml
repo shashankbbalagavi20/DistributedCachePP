@@ -34,33 +34,33 @@ jobs:
 
       - name: Run API Tests with curl
         run: |
-          ./build/DistributedCachePP --host 127.0.0.1 --port 5001 &
+          ./build/DistributedCachePP --host 127.0.0.1 --port 5000 &
           SERVER_PID=$!
           sleep 2
 
           echo "🔹 PUT foo=bar"
-          curl -s -X PUT http://127.0.0.1:5001/cache/foo \
+          curl -s -X PUT http://127.0.0.1:5000/cache/foo \
             -H "Content-Type: application/json" \
             -d '{"value":"bar","ttl":500}' | grep '"status":"ok"'
 
           echo "🔹 GET foo"
-          curl -s http://127.0.0.1:5001/cache/foo | grep "bar"
+          curl -s http://127.0.0.1:5000/cache/foo | grep "bar"
 
           echo "🔹 DELETE foo"
-          curl -s -X DELETE http://127.0.0.1:5001/cache/foo | grep "deleted"
+          curl -s -X DELETE http://127.0.0.1:5000/cache/foo | grep "deleted"
 
           echo "🔹 GET foo (expect 404)"
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5001/cache/foo)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/cache/foo)
           test "$STATUS" -eq 404
 
           echo "🔹 PUT malformed JSON (expect 400)"
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X PUT http://127.0.0.1:5001/cache/bad \
+            -X PUT http://127.0.0.1:5000/cache/bad \
             -H "Content-Type: application/json" \
             -d '{"value": }')
           test "$STATUS" -eq 400
 
           echo "🔹 GET metrics"
-          curl -s http://127.0.0.1:5001/metrics | grep "cache_hits_total"
+          curl -s http://127.0.0.1:5000/metrics | grep "cache_hits_total"
 
           kill $SERVER_PID
