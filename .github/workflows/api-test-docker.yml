@@ -1,0 +1,60 @@
+name: CI - API Tests (Docker)
+
+on:
+  push:
+    branches: [main, feature/docker]
+  pull_request:
+    branches: [main, feature/docker]
+
+jobs:
+  api-tests:
+    name: REST API (cURL) Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Build Docker image
+      - name: Build Docker image
+        run: docker build -t distributed-cache .
+
+      # Step 3: Run container in background
+      - name: Run server container
+        run: |
+          docker run -d -p 5000:5000 --name cache_server distributed-cache
+          sleep 3
+
+      # Step 4: Run API tests with curl
+      - name: Run cURL API tests
+        run: |
+          echo "🔹 PUT foo=bar"
+          curl -s -X PUT http://127.0.0.1:5000/cache/foo \
+            -H "Content-Type: application/json" \
+            -d '{"value":"bar","ttl":60}' | grep '"status":"ok"'
+
+          echo "🔹 GET foo"
+          curl -s http://127.0.0.1:5000/cache/foo | grep "bar"
+
+          echo "🔹 DELETE foo"
+          curl -s -X DELETE http://127.0.0.1:5000/cache/foo | grep "deleted"
+
+          echo "🔹 GET foo (expect 404)"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/cache/foo)
+          test "$STATUS" -eq 404
+
+          echo "🔹 PUT malformed JSON (expect 400)"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X PUT http://127.0.0.1:5000/cache/bad \
+            -H "Content-Type: application/json" \
+            -d '{"value": }')
+          test "$STATUS" -eq 400
+
+          echo "🔹 GET metrics"
+          curl -s http://127.0.0.1:5000/metrics | grep "cache_hits_total"
+
+      # Step 5: Stop & cleanup container
+      - name: Cleanup
+        if: always()
+        run: docker rm -f cache_server
