@@ -2,8 +2,9 @@ name: CI - API Tests
 
 on:
   push:
-    branches:
-      - feature/docker
+    branches: [main, feature/docker]
+  pull_request:
+    branches: [main, feature/docker]
 
 jobs:
   api-tests:
