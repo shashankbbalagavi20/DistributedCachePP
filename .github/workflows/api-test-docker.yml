@@ -1,10 +1,9 @@
-name: CI - API Tests (Docker)
+name: CI - API Tests
 
 on:
   push:
-    branches: [main, feature/docker]
-  pull_request:
-    branches: [main, feature/docker]
+    branches:
+      - feature/docker
 
 jobs:
   api-tests:
@@ -12,49 +11,69 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout code
+      # Step 1: Checkout repository
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Build Docker image
+      # Step 2: Install CMake & build tools
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v1
+        with:
+          cmake-version: '3.24.0'
+
+      - name: Install build tools (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++ make
+
+      # Step 3: Build Docker image
       - name: Build Docker image
         run: docker build -t distributed-cache .
 
-      # Step 3: Run container in background
-      - name: Run server container
+      # Step 4: Run container in background
+      - name: Start container
         run: |
-          docker run -d -p 5000:5000 --name cache_server distributed-cache
+          docker run -d -p 5000:5000 --name cache-server distributed-cache
           sleep 3
 
-      # Step 4: Run API tests with curl
+      # Step 5: Run cURL API tests
       - name: Run cURL API tests
         run: |
           echo "🔹 PUT foo=bar"
-          curl -s -X PUT http://127.0.0.1:5000/cache/foo \
+          PUT_RES=$(curl -s -X PUT http://127.0.0.1:5000/cache/foo \
             -H "Content-Type: application/json" \
-            -d '{"value":"bar","ttl":60}' | grep '"status":"ok"'
+            -d '{"value":"bar","ttl":60}')
+          echo "Response: $PUT_RES"
+          echo "$PUT_RES" | grep -q '"status":"ok"' || exit 1
 
           echo "🔹 GET foo"
-          curl -s http://127.0.0.1:5000/cache/foo | grep "bar"
+          GET_RES=$(curl -s http://127.0.0.1:5000/cache/foo)
+          echo "Response: $GET_RES"
+          echo "$GET_RES" | grep -q "bar" || exit 1
 
           echo "🔹 DELETE foo"
-          curl -s -X DELETE http://127.0.0.1:5000/cache/foo | grep "deleted"
+          DEL_RES=$(curl -s -X DELETE http://127.0.0.1:5000/cache/foo)
+          echo "Response: $DEL_RES"
+          echo "$DEL_RES" | grep -q "deleted" || exit 1
 
           echo "🔹 GET foo (expect 404)"
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/cache/foo)
-          test "$STATUS" -eq 404
+          echo "Status: $STATUS"
+          test "$STATUS" -eq 404 || exit 1
 
           echo "🔹 PUT malformed JSON (expect 400)"
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -X PUT http://127.0.0.1:5000/cache/bad \
             -H "Content-Type: application/json" \
             -d '{"value": }')
-          test "$STATUS" -eq 400
+          echo "Status: $STATUS"
+          test "$STATUS" -eq 400 || exit 1
 
           echo "🔹 GET metrics"
-          curl -s http://127.0.0.1:5000/metrics | grep "cache_hits_total"
+          METRICS=$(curl -s http://127.0.0.1:5000/metrics)
+          echo "$METRICS" | grep -q "cache_hits_total" || exit 1
 
-      # Step 5: Stop & cleanup container
-      - name: Cleanup
+      # Step 6: Cleanup
+      - name: Stop and remove container
         if: always()
-        run: docker rm -f cache_server
+        run: docker rm -f cache-server
