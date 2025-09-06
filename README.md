@@ -2,6 +2,7 @@
 
 [![Unit Tests](https://github.com/shashankbbalagavi20/DistributedCachePP/actions/workflows/ci.yml/badge.svg)](https://github.com/shashankbbalagavi20/DistributedCachePP/actions/workflows/ci.yml)
 [![API Tests](https://github.com/shashankbbalagavi20/DistributedCachePP/actions/workflows/api-tests.yml/badge.svg)](https://github.com/shashankbbalagavi20/DistributedCachePP/actions/workflows/api-tests.yml)
+[![Docker Support](https://github.com/shashankbbalagavi20/DistributedCachePP/actions/workflows/api-test-docker.yml/badge.svg)](https://github.com/shashankbbalagavi20/DistributedCachePP/actions/workflows/api-test-docker.yml)
 
 **A production-grade C++17 distributed in-memory cache with LRU eviction, TTL expiration, leader–follower replication, sharding, REST API, and Prometheus metrics.**
 
@@ -27,6 +28,7 @@ The system supports:
 
 - ✅ **Unit tests** run on **Linux, macOS, and Windows**.  
 - ✅ **API integration tests** verify REST endpoints using `curl`.
+- ✅ **Docker image** is built and tested in CI.
 ---
 
 ## ✨ Features
@@ -68,6 +70,7 @@ The system supports:
 - **Serialization:** [nlohmann/json](https://github.com/nlohmann/json)
 - **Monitoring:** Prometheus C++ client
 - **Testing:** GoogleTest (GTest)
+- **Containerization:** Docker
 - **Version Control:** Git/GitHub
 
 ---
@@ -102,6 +105,18 @@ cmake --build .
 ./DistributedCachePP --role follower --port 5001 --leader http://localhost:5000
 ./DistributedCachePP --role follower --port 5002 --leader http://localhost:5000
 ```
+### 🐳 Run with Docker
+
+You can also run the cache server directly in Docker.
+
+```bash
+# Build the image:
+docker build -t distributed-cache .
+
+# Run the container:
+docker run -p 5000:5000 distributed-cache
+```
+The server will be available at http://127.0.0.1:5000.
 
 ## 📂 Project Structure
 
@@ -120,6 +135,7 @@ DistributedCachePP/\
 ├── tests/                # Unit tests\
 │   └── cache_tests.cpp\
 ├── CMakeLists.txt        # Build configuration\
+├── Dockerfile            # Docker Build
 └── README.md             # Documentation
 
 ## 📜 API Reference

@@ -1,0 +1,68 @@
+name: API Integration Tests
+
+on:
+  push:
+    branches: [main, feature/docker]
+  pull_request:
+    branches: [main, feature/docker]
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout repo
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Build Docker image
+      - name: Build Docker image
+        run: docker build -t distributed-cache .
+
+      # Step 3: Run container in background
+      - name: Start container
+        run: |
+          docker run -d -p 5000:5000 --name distcache distributed-cache
+          sleep 3
+
+      # Step 4: Run API tests with curl
+      - name: Run API Tests
+        run: |
+          echo "🔹 PUT foo=bar"
+          PUT_RES=$(curl -s -X PUT http://127.0.0.1:5000/cache/foo \
+            -H "Content-Type: application/json" \
+            -d '{"value":"bar","ttl":60}')
+          echo "Response: $PUT_RES"
+          echo "$PUT_RES" | grep -q '"status": *"ok"' || exit 1
+
+          echo "🔹 GET foo"
+          GET_RES=$(curl -s http://127.0.0.1:5000/cache/foo)
+          echo "Response: $GET_RES"
+          echo "$GET_RES" | grep -q '"bar"' || exit 1
+
+          echo "🔹 DELETE foo"
+          DEL_RES=$(curl -s -X DELETE http://127.0.0.1:5000/cache/foo)
+          echo "Response: $DEL_RES"
+          echo "$DEL_RES" | grep -q '"deleted"' || exit 1
+
+          echo "🔹 GET foo (expect 404)"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/cache/foo)
+          echo "Status: $STATUS"
+          test "$STATUS" -eq 404 || exit 1
+
+          echo "🔹 PUT malformed JSON (expect 400)"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X PUT http://127.0.0.1:5000/cache/bad \
+            -H "Content-Type: application/json" \
+            -d '{"value": }')
+          echo "Status: $STATUS"
+          test "$STATUS" -eq 400 || exit 1
+
+          echo "🔹 GET metrics"
+          METRICS=$(curl -s http://127.0.0.1:5000/metrics)
+          echo "$METRICS" | grep -q "cache_hits_total" || exit 1
+
+      # Step 5: Cleanup
+      - name: Stop container
+        if: always()
+        run: docker stop distcache && docker rm distcache
