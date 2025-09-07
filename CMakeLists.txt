@@ -46,11 +46,12 @@ target_include_directories(DistributedCacheLib
  PUBLIC
   include
   ${JSON_INCLUDE_DIR}   # in case replication uses JSON later
+  ${httplib_SOURCE_DIR}
 )
 # ---------------- Main Server Binary ----------------
 add_executable(DistributedCachePP src/main.cpp src/api.cpp)
 target_include_directories(DistributedCachePP PRIVATE ${JSON_INCLUDE_DIR} include)
-target_link_libraries(DistributedCachePP PRIVATE DistributedCacheLib httplib::httplib)
+target_link_libraries(DistributedCachePP PUBLIC DistributedCacheLib httplib::httplib)
 
 if(UNIX)
     target_link_libraries(DistributedCachePP PRIVATE pthread)
