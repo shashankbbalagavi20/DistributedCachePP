@@ -41,7 +41,7 @@ if(NOT json_POPULATED)
 endif()
 
 # ---------------- Library ----------------
-add_library(DistributedCacheLib src/cache.cpp)
+add_library(DistributedCacheLib src/cache.cpp src/replication.cpp)
 target_include_directories(DistributedCacheLib PUBLIC include)
 
 # ---------------- Main Server Binary ----------------
