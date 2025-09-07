@@ -42,8 +42,11 @@ endif()
 
 # ---------------- Library ----------------
 add_library(DistributedCacheLib src/cache.cpp src/replication.cpp)
-target_include_directories(DistributedCacheLib PUBLIC include)
-
+target_include_directories(DistributedCacheLib
+ PUBLIC
+  include
+  ${JSON_INCLUDE_DIR}   # in case replication uses JSON later
+)
 # ---------------- Main Server Binary ----------------
 add_executable(DistributedCachePP src/main.cpp src/api.cpp)
 target_include_directories(DistributedCachePP PRIVATE ${JSON_INCLUDE_DIR} include)
