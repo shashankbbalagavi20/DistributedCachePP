@@ -46,6 +46,7 @@ target_include_directories(DistributedCacheLib
  PUBLIC
   include
   ${JSON_INCLUDE_DIR}   # in case replication uses JSON later
+  SYSTEM
   ${httplib_SOURCE_DIR}
 )
 # ---------------- Main Server Binary ----------------
