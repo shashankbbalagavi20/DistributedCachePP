@@ -7,7 +7,7 @@
 
 using json = nlohmann::json;
 
-CacheAPI::CacheAPI(std::shared_ptr<Cache> cache) : cache_(std::move(cache)) {}
+CacheAPI::CacheAPI(std::shared_ptr<Cache> cache, ReplicationManager* repl) : cache_(std::move(cache)), replication_(repl) {}
 
 void CacheAPI::logRequest(const std::string& method, const std::string& path, int status)
 {
@@ -77,6 +77,12 @@ void CacheAPI::start(const std::string& host, int port){
             uint64_t ttl = body_json.value("ttl", 0);
 
             cache_->put(key, value, ttl);
+
+            // Replicate to followers if applicable
+            if(replication_){
+                replication_->replicatePut(key, value, ttl);
+            }
+
             res.set_content(R"({"status": "ok"})", "application/json");
             res.status = 200;
         }
@@ -93,6 +99,11 @@ void CacheAPI::start(const std::string& host, int port){
         if(cache_->erase(key)){
             res.set_content(R"({"status": "deleted"})", "application/json");
             res.status = 200;
+
+            // Replicate if leader
+            if(replication_){
+                replication_->replicateDelete(key);
+            }
         }
         else{
             res.status = 404;

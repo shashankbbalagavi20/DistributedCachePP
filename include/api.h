@@ -3,6 +3,7 @@
 #define API_H
 
 #include "cache.h"
+#include "replication.h"
 #include "httplib.h"
 #include <memory>
 #include <string>
@@ -16,7 +17,7 @@ public:
      * Constructor
      * @param cache Shared pointer to Cache instance
      */
-    explicit CacheAPI(std::shared_ptr<Cache> cache);
+    explicit CacheAPI(std::shared_ptr<Cache> cache, ReplicationManager* repl = nullptr);
 
     /**
      * Start the HTTP server
@@ -36,6 +37,7 @@ private:
     void logRequest(const std::string& method, const std::string& path, int status);
     std::shared_ptr<Cache> cache_;
     httplib::Server server_;
+    ReplicationManager* replication_;
 };
 
 #endif // API_H
