@@ -86,4 +86,13 @@ if(BUILD_TESTING)
         target_link_libraries(ApiTests PRIVATE pthread)
     endif()
     add_test(NAME ApiTests COMMAND ApiTests)
+
+    # Replication tests
+    add_executable(ReplicationTests tests/replication_test.cpp src/replication.cpp)
+    target_include_directories(ReplicationTests PRIVATE include)
+    target_link_libraries(ReplicationTests PRIVATE DistributedCacheLib gtest_main httplib::httplib)
+    if(UNIX)
+        target_link_libraries(ReplicationTests PRIVATE pthread)
+    endif()
+    add_test(NAME ReplicationTests COMMAND ReplicationTests)
 endif()
