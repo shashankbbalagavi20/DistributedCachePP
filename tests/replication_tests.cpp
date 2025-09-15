@@ -1,6 +1,9 @@
 #include <gtest/gtest.h>
 #include <httplib.h>
 #include "replication.h"
+#include "cache.h"
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 // A tiny fake follower server for capturing requests
 class FakeFollower {
@@ -28,6 +31,7 @@ public:
 
     std::string lastPutKey;
     std::string lastPutBody;
+    std::string lastDeleteKey;
 
 private:
     httplib::Server server_;
