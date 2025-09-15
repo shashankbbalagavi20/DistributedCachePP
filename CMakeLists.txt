@@ -88,7 +88,7 @@ if(BUILD_TESTING)
     add_test(NAME ApiTests COMMAND ApiTests)
 
     # Replication tests
-    add_executable(ReplicationTests tests/replication_test.cpp src/replication.cpp)
+    add_executable(ReplicationTests tests/replication_tests.cpp src/replication.cpp)
     target_include_directories(ReplicationTests PRIVATE include)
     target_link_libraries(ReplicationTests PRIVATE DistributedCacheLib gtest_main httplib::httplib)
     if(UNIX)
