@@ -100,7 +100,7 @@ TEST(ReplicationTest, StressReplicationToFollowers) {
         res.set_content(R"({"status":"ok"})", "application/json");
     });
     server1.Delete(R"(/cache/(.+))", [&](const httplib::Request& req, httplib::Response& res) {
-        follower1.remove(req.matches[1]);
+        follower1.erase(req.matches[1]);
         res.set_content(R"({"status":"deleted"})", "application/json");
     });
 
@@ -111,7 +111,7 @@ TEST(ReplicationTest, StressReplicationToFollowers) {
         res.set_content(R"({"status":"ok"})", "application/json");
     });
     server2.Delete(R"(/cache/(.+))", [&](const httplib::Request& req, httplib::Response& res) {
-        follower2.remove(req.matches[1]);
+        follower2.erase(req.matches[1]);
         res.set_content(R"({"status":"deleted"})", "application/json");
     });
 
