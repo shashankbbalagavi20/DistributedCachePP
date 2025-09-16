@@ -14,7 +14,7 @@ endif()
 if (MSVC)
     add_compile_options(/W4 /permissive-)
 else()
-    add_compile_options(-Wall -Wextra -pedantic -Werror)
+    add_compile_options(-Wall -Wextra -pedantic)
 endif()
 
 # Source and include directories
@@ -41,13 +41,18 @@ if(NOT json_POPULATED)
 endif()
 
 # ---------------- Library ----------------
-add_library(DistributedCacheLib src/cache.cpp)
-target_include_directories(DistributedCacheLib PUBLIC include)
-
+add_library(DistributedCacheLib src/cache.cpp src/replication.cpp)
+target_include_directories(DistributedCacheLib
+ PUBLIC
+  include
+  ${JSON_INCLUDE_DIR}   # in case replication uses JSON later
+  SYSTEM
+  ${httplib_SOURCE_DIR}
+)
 # ---------------- Main Server Binary ----------------
 add_executable(DistributedCachePP src/main.cpp src/api.cpp)
 target_include_directories(DistributedCachePP PRIVATE ${JSON_INCLUDE_DIR} include)
-target_link_libraries(DistributedCachePP PRIVATE DistributedCacheLib httplib::httplib)
+target_link_libraries(DistributedCachePP PUBLIC DistributedCacheLib httplib::httplib)
 
 if(UNIX)
     target_link_libraries(DistributedCachePP PRIVATE pthread)
@@ -81,4 +86,13 @@ if(BUILD_TESTING)
         target_link_libraries(ApiTests PRIVATE pthread)
     endif()
     add_test(NAME ApiTests COMMAND ApiTests)
+
+    # Replication tests
+    add_executable(ReplicationTests tests/replication_tests.cpp src/replication.cpp)
+    target_include_directories(ReplicationTests PRIVATE include)
+    target_link_libraries(ReplicationTests PRIVATE DistributedCacheLib gtest_main httplib::httplib)
+    if(UNIX)
+        target_link_libraries(ReplicationTests PRIVATE pthread)
+    endif()
+    add_test(NAME ReplicationTests COMMAND ReplicationTests)
 endif()

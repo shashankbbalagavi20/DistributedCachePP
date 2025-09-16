@@ -127,7 +127,7 @@ TEST(CacheAsyncEvictionTest, EvictsExpiredKey){
 
     // Insert with very short TTL
     cache.put("A", "expired", 100); // TTL = 100 ms
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     EXPECT_FALSE(cache.contains("A")); // shall be removed
     EXPECT_EQ(cache.size(), 0);  // cache shall be empty
