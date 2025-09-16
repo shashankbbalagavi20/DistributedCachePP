@@ -17,10 +17,16 @@ public:
             res.set_content(R"({"status":"ok"})", "application/json");
         });
 
+        server_.Delete("/cache/(.*)", [&](const httplib::Request& req, httplib::Response& res) {
+            lastDeleteKey = req.matches[1];
+            res.set_content(R"({"status":"deleted"})", "application/json");
+        });
+
         thread_ = std::thread([&]() {
             server_.listen("127.0.0.1", port_);
         });
 
+        // Allow server time to bind
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
