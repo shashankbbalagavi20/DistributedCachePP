@@ -22,7 +22,7 @@ public:
 
     LeaderElector(std::string self_url,
               std::vector<std::pair<std::string,int>> peers = {},
-              PromoteCallback promote_cb = [](){})
+              PromoteCallback promote_cb = [](){});
 
     ~LeaderElector();
 
