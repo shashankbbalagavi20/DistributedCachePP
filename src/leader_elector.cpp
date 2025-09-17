@@ -19,6 +19,18 @@ LeaderElector::LeaderElector(std::string self_url,
       consecutive_failures_(0)
 {}
 
+LeaderElector(std::string self_url,
+              std::vector<std::pair<std::string,int>> peers = {},
+              PromoteCallback promote_cb = [](){})
+    : LeaderElector(std::move(self_url),
+                    std::move(peers),
+                    "",              // no current leader
+                    500,             // default 500ms interval
+                    3,               // default failure threshold
+                    std::move(promote_cb)) 
+{
+}
+
 LeaderElector::~LeaderElector() {
     stop();
 }
@@ -54,6 +66,10 @@ bool LeaderElector::poll_health(const std::string& url) {
         if (res && res->status == 200) return true;
     } catch (...) {}
     return false;
+}
+
+bool isLeader() {
+    return leader_url_ == self_url_;
 }
 
 void LeaderElector::loop() {

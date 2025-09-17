@@ -20,13 +20,17 @@ public:
                   int failure_threshold,
                   PromoteCallback promote_cb);
 
+    LeaderElector(std::string self_url,
+              std::vector<std::pair<std::string,int>> peers = {},
+              PromoteCallback promote_cb = [](){})
+
     ~LeaderElector();
 
     void start();
     void stop();
 
     void set_leader(const std::string& leader_url);
-
+    bool isLeader();
     // 🔑 For tests / observability
     std::string get_current_leader();
 
