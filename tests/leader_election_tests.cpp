@@ -104,3 +104,132 @@ TEST(LeaderElectionTest, LeaderResignationPromotesFollower) {
 
     follower.stop();
 }
+
+class FakeHealthServer {
+public:
+    FakeHealthServer(int port) : port_(port), running_(false) {}
+
+    void start() {
+        server_.Get("/healthz", [&](const httplib::Request&, httplib::Response& res) {
+            res.status = 200;
+            res.set_content("ok", "text/plain");
+        });
+
+        running_ = true;
+        thread_ = std::thread([&]() {
+            server_.listen("127.0.0.1", port_);
+        });
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // allow bind
+    }
+
+    void stop() {
+        if (running_) {
+            server_.stop();
+            running_ = false;
+            if (thread_.joinable()) thread_.join();
+        }
+    }
+
+private:
+    int port_;
+    httplib::Server server_;
+    std::thread thread_;
+    bool running_;
+};
+
+// --- Tests ---
+TEST(LeaderElectorTest, PromotesSelfWhenLeaderFails) {
+    std::atomic<bool> promoted{false};
+
+    // Start a fake leader on 5001
+    FakeHealthServer leader(5001);
+    leader.start();
+
+    LeaderElector elector(
+        "http://127.0.0.1:5002",                   // self
+        {{"http://127.0.0.1:5001", 10}},           // peers with priority
+        "http://127.0.0.1:5001",                   // current leader
+        200,                                       // check interval (ms)
+        2,                                         // failure threshold
+        [&]() { promoted.store(true); }            // promote callback
+    );
+
+    elector.start();
+
+    // Kill leader after short delay
+    std::this_thread::sleep_for(std::chrono::milliseconds(400));
+    leader.stop();
+
+    // Wait enough for elector to detect failure & promote
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+    elector.stop();
+
+    EXPECT_TRUE(promoted.load()) << "Node should promote itself after leader fails";
+}
+
+TEST(LeaderElectorTest, DoesNotPromoteIfLeaderHealthy) {
+    std::atomic<bool> promoted{false};
+
+    // Fake healthy leader
+    FakeHealthServer leader(5003);
+    leader.start();
+
+    LeaderElector elector(
+        "http://127.0.0.1:5004",                   // self
+        {{"http://127.0.0.1:5003", 10}},           // peers
+        "http://127.0.0.1:5003",                   // current leader
+        200,                                       // check interval
+        2,                                         // failure threshold
+        [&]() { promoted.store(true); }            // promote callback
+    );
+
+    elector.start();
+
+    // Keep leader alive
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+    elector.stop();
+    leader.stop();
+
+    EXPECT_FALSE(promoted.load()) << "Node should not promote while leader is healthy";
+}
+
+TEST(LeaderElectorTest, ElectsHighestPriorityHealthyPeer) {
+    std::atomic<bool> promoted{false};
+
+    // Start two peers (follower candidates)
+    FakeHealthServer peer_low(5005);   // lower priority
+    FakeHealthServer peer_high(5006);  // higher priority
+    peer_low.start();
+    peer_high.start();
+
+    // Start elector with both peers
+    LeaderElector elector(
+        "http://127.0.0.1:5007", // self
+        {
+            {"http://127.0.0.1:5005", 5},  // low priority
+            {"http://127.0.0.1:5006", 10}  // high priority
+        },
+        "http://127.0.0.1:5005",           // initial leader (low priority)
+        200,                               // interval
+        2,                                 // failure threshold
+        [&]() { promoted.store(true); }    // self promote callback
+    );
+
+    elector.start();
+
+    // Kill the low-priority leader
+    std::this_thread::sleep_for(std::chrono::milliseconds(400));
+    peer_low.stop();
+
+    // Wait for elector to detect and re-elect
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+    elector.stop();
+    peer_high.stop();
+
+    // We should *not* promote self (5007), but instead pick high-priority peer (5006)
+    EXPECT_FALSE(promoted.load()) << "Self should not be promoted when higher-priority peer is healthy";
+}

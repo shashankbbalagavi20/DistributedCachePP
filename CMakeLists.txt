@@ -97,7 +97,7 @@ if(BUILD_TESTING)
     add_test(NAME ReplicationTests COMMAND ReplicationTests)
 
     # Leader Elector Tests
-    add_executable(LeaderElectorTests tests/leader_elector_tests.cpp src/leader_elector.cpp)
+    add_executable(LeaderElectorTests tests/leader_election_tests.cpp src/leader_elector.cpp)
     target_include_directories(LeaderElectorTests PRIVATE include)
     target_link_libraries(LeaderElectorTests PRIVATE DistributedCacheLib gtest_main httplib::httplib)
     if(UNIX)
