@@ -3,6 +3,7 @@
 #include "replication.h"
 #include "leader_elector.h"
 #include <iostream>
+#include <memory>
 
 int main(int argc, char* argv[]) {
     std::string role = "leader";
@@ -23,32 +24,38 @@ int main(int argc, char* argv[]) {
     auto cache = std::make_shared<Cache>(100);
     ReplicationManager repl;
 
-    // Start as leader if explicitly set
-    CacheAPI api(cache, role == "leader" ? &repl : nullptr);
+    // Manage API through unique_ptr so we can recreate if promoted
+    std::unique_ptr<CacheAPI> api;
 
     if (role == "leader") {
         for (auto& f : followers) {
             repl.addFollower(f);
         }
+        api = std::make_unique<CacheAPI>(cache, &repl);
+    } else {
+        api = std::make_unique<CacheAPI>(cache, nullptr);
     }
 
-    // Create a leader elector (interval=2000ms, threshold=3 fails)
+    // Leader elector (interval=2000ms, threshold=3)
     LeaderElector elector(
         self_url,
-        {},                  // no peer priorities passed for now
-        role == "leader" ? self_url : "", 
+        {},  // no peer priorities for now
+        role == "leader" ? self_url : "",
         2000,
         3,
         [&]() {
             std::cerr << "✅ Promoted to leader!" << std::endl;
-            // If promoted, attach replication manager dynamically
-            api = CacheAPI(cache, &repl);
+            for (auto& f : followers) {
+                repl.addFollower(f);
+            }
+            // Recreate API with replication enabled
+            api = std::make_unique<CacheAPI>(cache, &repl);
         }
     );
 
     elector.start();
 
-    api.start("0.0.0.0", port);
+    api->start("0.0.0.0", port);
 
     elector.stop();
     return 0;
