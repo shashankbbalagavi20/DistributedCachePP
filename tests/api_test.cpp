@@ -81,7 +81,7 @@ TEST(ApiTest, InvalidPut) {
 
 TEST(ApiTest, HealthzEndpointRespondsOk) {
     // Setup cache + API
-    auto cache = std::make_shared<Cache>(10, std::chrono::milliseconds(1000));
+    auto cache = std::make_shared<Cache>(10, 1000);
     ReplicationManager repl;
     CacheAPI api(cache, &repl);
 
