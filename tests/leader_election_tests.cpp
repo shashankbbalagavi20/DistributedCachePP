@@ -1,4 +1,4 @@
-#include "leader.h"
+#include "leader_elector.h"
 #include <gtest/gtest.h>
 #include <thread>
 #include <chrono>
