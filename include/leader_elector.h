@@ -20,10 +20,6 @@ public:
                   int failure_threshold,
                   PromoteCallback promote_cb);
 
-    LeaderElector(std::string self_url,
-              std::vector<std::pair<std::string,int>> peers = {},
-              PromoteCallback promote_cb = [](){});
-
     ~LeaderElector();
 
     void start();

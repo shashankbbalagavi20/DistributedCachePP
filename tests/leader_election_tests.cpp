@@ -10,7 +10,7 @@ static void short_wait(int ms = 300) {
 
 // Simple fake peers to simulate cluster state
 TEST(LeaderElectionTest, BecomesLeaderIfNoPeers) {
-    LeaderElector elector("node1", 7001, {}); 
+    LeaderElector elector("node1", 7001, "", 500, 3, {}); 
     elector.start();
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     EXPECT_TRUE(elector.isLeader());
@@ -19,7 +19,7 @@ TEST(LeaderElectionTest, BecomesLeaderIfNoPeers) {
 
 TEST(LeaderElectionTest, NotLeaderIfPeerHasHigherId) {
     // Node2 should win because its ID is lexicographically larger
-    LeaderElector elector("node1", 7001, {"node2"});
+    LeaderElector elector("node1", 7001, "", 500, 3, {"node2"});
     elector.start();
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     EXPECT_FALSE(elector.isLeader());
@@ -27,7 +27,7 @@ TEST(LeaderElectionTest, NotLeaderIfPeerHasHigherId) {
 }
 
 TEST(LeaderElectionTest, LeadershipSwitchesOnStop) {
-    LeaderElector elector("node1", 7001, {});
+    LeaderElector elector("node1", 7001, "", 500, 3, {});
     elector.start();
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     ASSERT_TRUE(elector.isLeader());
@@ -37,7 +37,7 @@ TEST(LeaderElectionTest, LeadershipSwitchesOnStop) {
 }
 
 TEST(LeaderElectionTest, SingleNodeBecomesLeader) {
-    LeaderElector node1("node1", 7001, {}); 
+    LeaderElector node1("node1", 7001, "", 500, 3, {}); 
     node1.start();
     short_wait();
     EXPECT_TRUE(node1.isLeader());
@@ -46,8 +46,8 @@ TEST(LeaderElectionTest, SingleNodeBecomesLeader) {
 
 TEST(LeaderElectionTest, ChoosesHighestPriorityLeader) {
     // node2 > node1 (lexicographically or ID priority)
-    LeaderElector node1("node1", 7001, {"node2"});
-    LeaderElector node2("node2", 7002, {"node1"});
+    LeaderElector node1("node1", 7001, "", 500, 3, {"node2"});
+    LeaderElector node2("node2", 7002, "", 500, 3, {"node1"});
     
     node1.start();
     node2.start();
@@ -65,8 +65,8 @@ TEST(LeaderElectionTest, ChoosesHighestPriorityLeader) {
 // ---------------------------------------------------------
 
 TEST(LeaderElectionTest, LeaderFailureTriggersNewLeader) {
-    LeaderElector node1("node1", 7001, {"node2"});
-    LeaderElector node2("node2", 7002, {"node1"});
+    LeaderElector node1("node1", 7001, "", 500, 3, {"node2"});
+    LeaderElector node2("node2", 7002, "", 500, 3, {"node1"});
     
     node1.start();
     node2.start();
@@ -86,8 +86,8 @@ TEST(LeaderElectionTest, LeaderFailureTriggersNewLeader) {
 }
 
 TEST(LeaderElectionTest, LeaderResignationPromotesFollower) {
-    LeaderElector leader("leader", 7101, {"follower"});
-    LeaderElector follower("follower", 7102, {"leader"});
+    LeaderElector leader("leader", 7101, "", 500, 3, {"follower"});
+    LeaderElector follower("follower", 7102, "", 500, 3, {"leader"});
 
     leader.start();
     follower.start();
