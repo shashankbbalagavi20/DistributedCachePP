@@ -56,10 +56,6 @@ bool LeaderElector::poll_health(const std::string& url) {
     return false;
 }
 
-bool isLeader() {
-    return leader_url_ == self_url_;
-}
-
 void LeaderElector::loop() {
     while (running_.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(interval_ms_));

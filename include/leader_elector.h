@@ -26,7 +26,6 @@ public:
     void stop();
 
     void set_leader(const std::string& leader_url);
-    bool isLeader();
     // 🔑 For tests / observability
     std::string get_current_leader();
 

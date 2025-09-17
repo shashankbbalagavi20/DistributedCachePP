@@ -13,7 +13,7 @@ TEST(LeaderElectionTest, BecomesLeaderIfNoPeers) {
     LeaderElector elector("node1", 7001, "", 500, 3, {}); 
     elector.start();
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    EXPECT_TRUE(elector.isLeader());
+    EXPECT_EQ(elector.get_current_leader(), "node1");
     elector.stop();
 }
 
@@ -22,7 +22,7 @@ TEST(LeaderElectionTest, NotLeaderIfPeerHasHigherId) {
     LeaderElector elector("node1", 7001, "", 500, 3, {"node2"});
     elector.start();
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    EXPECT_FALSE(elector.isLeader());
+    EXPECT_NE(elector.get_current_leader(), "node1");
     elector.stop();
 }
 
@@ -30,17 +30,17 @@ TEST(LeaderElectionTest, LeadershipSwitchesOnStop) {
     LeaderElector elector("node1", 7001, "", 500, 3, {});
     elector.start();
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    ASSERT_TRUE(elector.isLeader());
+    ASSERT_EQ(elector.get_current_leader(), "node1");
 
     elector.stop();
-    EXPECT_FALSE(elector.isLeader());  // Once stopped, no longer leader
+    EXPECT_NE(elector.get_current_leader(), "node1");  // Once stopped, no longer leader
 }
 
 TEST(LeaderElectionTest, SingleNodeBecomesLeader) {
     LeaderElector node1("node1", 7001, "", 500, 3, {}); 
     node1.start();
     short_wait();
-    EXPECT_TRUE(node1.isLeader());
+    EXPECT_EQ(node1.get_current_leader(), "node1");
     node1.stop();
 }
 
@@ -53,8 +53,8 @@ TEST(LeaderElectionTest, ChoosesHighestPriorityLeader) {
     node2.start();
     short_wait();
 
-    EXPECT_FALSE(node1.isLeader());
-    EXPECT_TRUE(node2.isLeader());
+    EXPECT_NE(node1.get_current_leader(), "node1");
+    EXPECT_EQ(node2.get_current_leader(), "node2");
 
     node1.stop();
     node2.stop();
@@ -73,14 +73,14 @@ TEST(LeaderElectionTest, LeaderFailureTriggersNewLeader) {
     short_wait();
 
     // Suppose node2 becomes leader
-    ASSERT_TRUE(node2.isLeader());
-    ASSERT_FALSE(node1.isLeader());
+    ASSERT_EQ(node2.get_current_leader(), "node2");
+    ASSERT_NE(node1.get_current_leader(), "node1");
 
     // Simulate failure of node2
     node2.stop();
     short_wait(500); // give node1 some time to detect & promote
 
-    EXPECT_TRUE(node1.isLeader()) << "Node1 should take over after Node2 fails";
+    EXPECT_EQ(node1.get_current_leader(), "node1") << "Node1 should take over after Node2 fails";
 
     node1.stop();
 }
@@ -93,14 +93,14 @@ TEST(LeaderElectionTest, LeaderResignationPromotesFollower) {
     follower.start();
     short_wait();
 
-    ASSERT_TRUE(leader.isLeader());
-    ASSERT_FALSE(follower.isLeader());
+    ASSERT_EQ(leader.get_current_leader(), "leader");
+    ASSERT_NE(follower.get_current_leader(), "follower");
 
     // Gracefully stop leader (simulate voluntary resignation)
     leader.stop();
     short_wait(500);
 
-    EXPECT_TRUE(follower.isLeader()) << "Follower should become leader after resignation";
+    EXPECT_EQ(follower.get_current_leader(), "follower") << "Follower should become leader after resignation";
 
     follower.stop();
 }
