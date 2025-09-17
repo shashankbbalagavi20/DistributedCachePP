@@ -78,3 +78,32 @@ TEST(ApiTest, InvalidPut) {
     api.stop();
     server_thread.join();
 }
+
+TEST(ApiTest, HealthzEndpointRespondsOk) {
+    // Setup cache + API
+    auto cache = std::make_shared<Cache>(10, std::chrono::milliseconds(1000));
+    ReplicationManager repl;
+    CacheAPI api(cache, &repl);
+
+    // Start API on a test port
+    int port = 8085; // Use a non-conflicting port
+    std::thread server_thread([&]() {
+        api.start("127.0.0.1", port);
+    });
+
+    // Give server time to bind
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    // Send request to /healthz
+    httplib::Client cli("127.0.0.1", port);
+    auto res = cli.Get("/healthz");
+
+    // Validate response
+    ASSERT_TRUE(res != nullptr);
+    EXPECT_EQ(res->status, 200);
+    EXPECT_NE(res->body.find("\"status\":\"ok\""), std::string::npos);
+
+    // Shutdown
+    api.stop();
+    if (server_thread.joinable()) server_thread.join();
+}
