@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
         else if (arg == "--followers" && i + 1 < argc) followers.push_back(argv[++i]);
     }
 
-    auto cache = std::make_shared<Cache>(100);
+    auto cache = std::make_shared<Cache>(100, 100); // 100 ms
     ReplicationManager repl;
 
     // Manage API through unique_ptr so we can recreate if promoted
