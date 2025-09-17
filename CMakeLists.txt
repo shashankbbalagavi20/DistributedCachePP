@@ -41,7 +41,7 @@ if(NOT json_POPULATED)
 endif()
 
 # ---------------- Library ----------------
-add_library(DistributedCacheLib src/cache.cpp src/replication.cpp)
+add_library(DistributedCacheLib src/cache.cpp src/replication.cpp src/leader_elector.cpp)
 target_include_directories(DistributedCacheLib
  PUBLIC
   include
@@ -50,7 +50,7 @@ target_include_directories(DistributedCacheLib
   ${httplib_SOURCE_DIR}
 )
 # ---------------- Main Server Binary ----------------
-add_executable(DistributedCachePP src/main.cpp src/api.cpp)
+add_executable(DistributedCachePP src/main.cpp src/api.cpp src/leader_elector.cpp)
 target_include_directories(DistributedCachePP PRIVATE ${JSON_INCLUDE_DIR} include)
 target_link_libraries(DistributedCachePP PUBLIC DistributedCacheLib httplib::httplib)
 
@@ -95,4 +95,13 @@ if(BUILD_TESTING)
         target_link_libraries(ReplicationTests PRIVATE pthread)
     endif()
     add_test(NAME ReplicationTests COMMAND ReplicationTests)
+
+    # Leader Elector Tests
+    add_executable(LeaderElectorTests tests/leader_election_tests.cpp src/leader_elector.cpp)
+    target_include_directories(LeaderElectorTests PRIVATE include)
+    target_link_libraries(LeaderElectorTests PRIVATE DistributedCacheLib gtest_main httplib::httplib)
+    if(UNIX)
+        target_link_libraries(LeaderElectorTests PRIVATE pthread)
+    endif()
+    add_test(NAME LeaderElectorTests COMMAND LeaderElectorTests)
 endif()
