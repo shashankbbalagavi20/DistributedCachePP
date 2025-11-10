@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include <thread>
 #include <chrono>
+#include "httplib.h"
 
 // Helper sleep wrapper
 static void short_wait(int ms = 300) {
