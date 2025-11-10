@@ -10,7 +10,14 @@ static void short_wait(int ms = 300) {
 
 // Simple fake peers to simulate cluster state
 TEST(LeaderElectionTest, BecomesLeaderIfNoPeers) {
-    LeaderElector elector("node1", 7001, "", 500, 3, {}); 
+    LeaderElector elector(
+    "node1",
+    {},               // no peers
+    "",               // current leader
+    500,              // interval
+    3,                // failure threshold
+    {}                // callback
+    ); 
     elector.start();
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     EXPECT_EQ(elector.get_current_leader(), "node1");
@@ -19,7 +26,14 @@ TEST(LeaderElectionTest, BecomesLeaderIfNoPeers) {
 
 TEST(LeaderElectionTest, NotLeaderIfPeerHasHigherId) {
     // Node2 should win because its ID is lexicographically larger
-    LeaderElector elector("node1", 7001, "", 500, 3, {"node2"});
+    LeaderElector elector(
+    "node1",
+    {{"node2", 1}},   // peers with priorities
+    "",               // current leader
+    500,
+    3,
+    {}
+   );
     elector.start();
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     EXPECT_NE(elector.get_current_leader(), "node1");
@@ -27,7 +41,14 @@ TEST(LeaderElectionTest, NotLeaderIfPeerHasHigherId) {
 }
 
 TEST(LeaderElectionTest, LeadershipSwitchesOnStop) {
-    LeaderElector elector("node1", 7001, "", 500, 3, {});
+    LeaderElector elector(
+    "node1",
+    {},               // no peers
+    "",               // current leader
+    500,              // interval
+    3,                // failure threshold
+    {}                // callback
+    ); 
     elector.start();
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     ASSERT_EQ(elector.get_current_leader(), "node1");
@@ -37,18 +58,38 @@ TEST(LeaderElectionTest, LeadershipSwitchesOnStop) {
 }
 
 TEST(LeaderElectionTest, SingleNodeBecomesLeader) {
-    LeaderElector node1("node1", 7001, "", 500, 3, {}); 
-    node1.start();
+    LeaderElector elector(
+    "node1",
+    {},               // no peers
+    "",               // current leader
+    500,              // interval
+    3,                // failure threshold
+    {}                // callback
+    ); 
+    elector.start();
     short_wait();
-    EXPECT_EQ(node1.get_current_leader(), "node1");
-    node1.stop();
+    EXPECT_EQ(elector.get_current_leader(), "node1");
+    elector.stop();
 }
 
 TEST(LeaderElectionTest, ChoosesHighestPriorityLeader) {
     // node2 > node1 (lexicographically or ID priority)
-    LeaderElector node1("node1", 7001, "", 500, 3, {"node2"});
-    LeaderElector node2("node2", 7002, "", 500, 3, {"node1"});
-    
+    LeaderElector node1(
+    "node1",
+    {{"node2", 1}},   // peers with priorities
+    "",               // current leader
+    500,
+    3,
+    {}
+   );
+    LeaderElector node2(
+    "node2",
+    {{"node1", 1}},   // peers with priorities
+    "",               // current leader
+    500,
+    3,
+    {}
+   );
     node1.start();
     node2.start();
     short_wait();
@@ -65,8 +106,22 @@ TEST(LeaderElectionTest, ChoosesHighestPriorityLeader) {
 // ---------------------------------------------------------
 
 TEST(LeaderElectionTest, LeaderFailureTriggersNewLeader) {
-    LeaderElector node1("node1", 7001, "", 500, 3, {"node2"});
-    LeaderElector node2("node2", 7002, "", 500, 3, {"node1"});
+    LeaderElector node1(
+    "node1",
+    {{"node2", 1}},   // peers with priorities
+    "",               // current leader
+    500,
+    3,
+    {}
+   );
+    LeaderElector node2(
+    "node2",
+    {{"node1", 1}},   // peers with priorities
+    "",               // current leader
+    500,
+    3,
+    {}
+   );
     
     node1.start();
     node2.start();
@@ -86,8 +141,22 @@ TEST(LeaderElectionTest, LeaderFailureTriggersNewLeader) {
 }
 
 TEST(LeaderElectionTest, LeaderResignationPromotesFollower) {
-    LeaderElector leader("leader", 7101, "", 500, 3, {"follower"});
-    LeaderElector follower("follower", 7102, "", 500, 3, {"leader"});
+    LeaderElector leader(
+    "leader",
+    {{"follower", 1}},   // peers with priorities
+    "",               // current leader
+    500,
+    3,
+    {}
+   );
+    LeaderElector follower(
+    "follower",
+    {{"leader", 1}},   // peers with priorities
+    "",               // current leader
+    500,
+    3,
+    {}
+   );
 
     leader.start();
     follower.start();
