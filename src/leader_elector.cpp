@@ -40,9 +40,11 @@ void LeaderElector::start() {
 
 
 void LeaderElector::stop() {
+    std::lock_guard<std::mutex> lock(mtx_);
     if (!running_.load()) return;
     running_.store(false);
     if (thread_.joinable()) thread_.join();
+    leader_url_.clear();
 }
 
 void LeaderElector::set_leader(const std::string& leader_url) {

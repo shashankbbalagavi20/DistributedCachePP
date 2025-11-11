@@ -114,7 +114,7 @@ void CacheAPI::start(const std::string& host, int port) {
     });
 
     server_.Get("/healthz", [this](const httplib::Request& req, httplib::Response& res) {
-        res.set_content(R"({"status": "ok"})", "application/json");
+        res.set_content(R"({"status":"ok"})", "application/json");
         res.status = 200;
         logRequest("GET", req.path, res.status);
     });
