@@ -40,11 +40,14 @@ void LeaderElector::start() {
 
 
 void LeaderElector::stop() {
-    std::lock_guard<std::mutex> lock(mtx_);
     if (!running_.load()) return;
     running_.store(false);
+    std::cerr << "[Elector] Stopping election loop for " << self_url_ << std::endl;
     if (thread_.joinable()) thread_.join();
-    leader_url_.clear();
+    {
+        std::lock_guard<std::mutex> lock(mtx_);
+        leader_url_.clear();
+    }
 }
 
 void LeaderElector::set_leader(const std::string& leader_url) {
@@ -61,7 +64,9 @@ std::string LeaderElector::get_current_leader() {
 bool LeaderElector::poll_health(const std::string& url) {
     try {
         httplib::Client cli(url.c_str());
-        cli.set_connection_timeout(std::chrono::seconds(1));
+        cli.set_connection_timeout(std::chrono::milliseconds(300));
+        cli.set_read_timeout(std::chrono::milliseconds(300));
+        cli.set_write_timeout(std::chrono::milliseconds(300));
         auto res = cli.Get("/healthz");
         if (res && res->status == 200) return true;
     } catch (...) {}
