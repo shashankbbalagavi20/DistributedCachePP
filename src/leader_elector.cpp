@@ -26,8 +26,18 @@ LeaderElector::~LeaderElector() {
 void LeaderElector::start() {
     if (running_.load()) return;
     running_.store(true);
+    // 🚀 Promote self immediately if no peers
+    if (peers_.empty()) {
+        {
+            std::lock_guard<std::mutex> lock(mtx_);
+            leader_url_ = self_url_;
+        }
+        if (promote_cb_) promote_cb_();
+        return; // No need to start loop
+    }
     thread_ = std::thread([this]{ loop(); });
 }
+
 
 void LeaderElector::stop() {
     if (!running_.load()) return;
@@ -59,6 +69,17 @@ bool LeaderElector::poll_health(const std::string& url) {
 void LeaderElector::loop() {
     while (running_.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(interval_ms_));
+
+        if (leader_url_.empty()) {
+            if (peers_.empty()) {
+                set_leader(self_url_);
+            if (promote_cb_) promote_cb_();
+        } else {
+            std::sort(peers_.begin(), peers_.end(),
+                  [](auto &a, auto &b){ return a.second > b.second; });
+            set_leader(peers_[0].first);
+            }
+        }
 
         if (leader_url_.empty()) {
             // pick by priority
