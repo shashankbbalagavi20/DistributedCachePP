@@ -88,16 +88,25 @@ void LeaderElector::loop() {
             }
         }
 
+        // If no known leader, perform initial election (including self)
         if (leader_url_.empty()) {
-            // pick by priority
-            std::sort(peers_.begin(), peers_.end(),
+            std::vector<std::pair<std::string,int>> candidates = peers_;
+            candidates.push_back({self_url_, 0});
+            std::sort(candidates.begin(), candidates.end(),
                       [](auto &a, auto &b){ return a.second > b.second; });
-            if (!peers_.empty()) {
-                std::lock_guard<std::mutex> lock(mtx_);
-                leader_url_ = peers_[0].first;
+            for (auto &c : candidates) {
+                if (poll_health(c.first)) {
+                    std::lock_guard<std::mutex> lock(mtx_);
+                    leader_url_ = c.first;
+                    if (c.first == self_url_) {
+                        std::cerr << "[Elector] Initial self-promotion: " << self_url_ << "\n";
+                        promote_cb_();
+                    }
+                    break;
+                }
             }
         }
-
+        
         std::string current_leader;
         {
             std::lock_guard<std::mutex> lock(mtx_);
